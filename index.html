@@ -260,7 +260,12 @@ textarea{width:100%;min-height:150px;resize:vertical}
 .pnames{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
 .pnames .btn{justify-content:center;padding:14px 10px;font-size:1.05rem}
 .pready{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;border:1px solid var(--line);border-radius:14px;padding:18px}
-.phone .cbtn{cursor:default}
+.cview{cursor:default}
+.mode .scard{display:flex;flex-direction:column;min-width:0}
+.mode .scard > button:first-child{flex:1;border-radius:10px 10px 0 0}
+.mode button.sprev{border-top:0;border-radius:0 0 10px 10px;padding:6px 10px;font-size:.8rem;color:var(--muted);display:flex;align-items:center;gap:6px}
+.preview{position:fixed;inset:0;z-index:50;background:#000b;overflow-y:auto;padding:calc(16px + env(safe-area-inset-top,0px)) 16px calc(16px + env(safe-area-inset-bottom,0px))}
+.preview .pinner{max-width:760px;margin:0 auto;background:var(--felt);border:1px solid var(--line);border-radius:14px;padding:16px}
 .pbtn{width:100%;justify-content:center;padding:16px 18px;font-size:1.15rem}
 </style>
 
@@ -1410,7 +1415,7 @@ function setupHTML(){
     return head + `${S.log.length||S.stage!=='players'?'':`<div class="tip"><span>First time telling the story?</span><button class="btn small primary" data-act="tab" data-k="guide">Read the 2-minute guide</button></div>`}
       <h2>Which game?</h2>
       <div class="mode scripts">${Object.entries(SCRIPTS).map(([id,sc])=>{ const rs = id==='teensy' ? teensyList : sc.roles;
-        return `<button class="${S.script===id?'on':''}" data-act="setscript" data-v="${id}"><b>${esc(sc.name)}</b><small>${sc.by?esc(sc.by)+' · ':''}${rs.length} characters${sc.fabled?.length?' · '+sc.fabled.map(k=>R[k].name).join(', '):''}</small></button>`; }).join('')}</div>
+        return `<div class="scard"><button class="${S.script===id?'on':''}" data-act="setscript" data-v="${id}"><b>${esc(sc.name)}</b><small>${sc.by?esc(sc.by)+' · ':''}${rs.length} characters${sc.fabled?.length?' · '+sc.fabled.map(k=>R[k].name).join(', '):''}</small></button><button class="sprev" data-act="preview" data-v="${id}">${ic('eye')}See characters</button></div>`; }).join('')}</div>
       ${S.script==='teensy'?`<p class="muted">Your list: ${teensyList.map(k=>R[k].name).join(', ')}.</p><div class="row" style="margin-bottom:12px"><button class="btn small" data-act="editteensy">Choose Teensyville characters</button></div>`:''}
       ${SCRIPTS[S.script]?.note?`<p class="muted">${esc(SCRIPTS[S.script].note)}</p>`:''}
       <div class="row" style="margin-bottom:10px"><button class="btn small" data-act="tab" data-k="script">${ic('book')}Share the ${esc(scriptName())} character sheet</button></div>
@@ -1476,6 +1481,20 @@ function setupHTML(){
   }
 }
 
+function charGroupsHTML(roles, fab){
+  const group = (l,ks) => ks.length ? `<h3>${l}</h3><div class="chars">${ks.map(k=>`<div class="cbtn cview ${R[k].team||''}"><span class="mini">${tokenSVG(k)}</span><span class="ctext"><b>${esc(R[k].name)}</b><small>${esc(R[k].ability)}</small></span></div>`).join('')}</div>` : '';
+  return SHEET_TEAMS.map(([t,l])=>group(l, roles.filter(k=>R[k]?.team===t))).join('') + group('Fabled', fab.filter(k=>R[k]));
+}
+function previewHTML(){
+  const id = ui.preview, sc = SCRIPTS[id]; if(!sc) return '';
+  const rs = id==='teensy' ? teensyList : sc.roles;
+  return `<div class="preview" role="dialog" aria-label="${esc(sc.name)} characters"><div class="pinner">
+    <div class="row" style="justify-content:space-between;align-items:flex-start;flex-wrap:nowrap"><div><h2 style="margin:0">${esc(sc.name)}</h2><span class="muted">${sc.by?esc(sc.by)+' · ':''}${rs.length} characters</span></div><button class="btn small" data-act="closepreview">Close</button></div>
+    ${sc.note?`<p class="muted">${esc(sc.note)}</p>`:''}
+    ${charGroupsHTML(rs, sc.fabled||[])}
+    <div class="row" style="margin-top:14px"><button class="btn" data-act="closepreview">Back</button><button class="btn primary" style="flex:1" data-act="setscript" data-v="${id}">Play ${esc(sc.name)}</button></div>
+  </div></div>`;
+}
 function playerCounts(){ return S.script==='teensy' ? [5,6] : Array.from({length:11},(_,i)=>i+5).filter(c=>DIST[c][0]<=pool('townsfolk').length+(pool('outsider').length>=DIST[c][1]?0:-99) && (DIST[c][2]<=pool('minion').length || pool('demon').includes('legion'))); }
 
 /* ---------- shareable character sheet ---------- */
@@ -1946,7 +1965,7 @@ function spyHTML(){
   return `<button class="show" style="animation:none" data-act="hideshow" aria-label="Hide the grimoire"><div class="spyg">${seats}<div class="mid">Grimoire</div></div><div class="hint">Click anywhere to hide</div></button>`;
 }
 function overlayHTML(){
-  const c = ui.show; if(!c) return '';
+  const c = ui.show; if(!c) return ui.preview ? previewHTML() : '';
   if(c.spy) return spyHTML();
   if(c.qr) return `<button class="show" data-act="hideshow" aria-label="Hide the QR code"><div class="eyebrow">Scan with your phone camera</div>${qrSVG(phoneLink())}<div class="ssub">Pick your name, then tap to see your character when the Storyteller says so.</div><div class="hint">Click anywhere to hide</div></button>`;
   if(c.final){
@@ -2134,7 +2153,9 @@ document.addEventListener('click', e=>{
     case 'toggleteensy': { const k = el.dataset.k; teensyList = teensyList.includes(k) ? teensyList.filter(x=>x!==k) : [...teensyList,k]; saveTeensy(); S.chosen = S.chosen.filter(x=>teensyList.includes(x)); return render(); }
     case 'resetteensy': teensyList = [...TEENSY]; saveTeensy(); return render();
     case 'cancelpick': ui.pick=null; return render();
-    case 'setscript': return commit(()=>{ S.script = el.dataset.v; S.chosen=[]; if(S.script==='teensy' && S.players.length>6) resize(6); }, `Chose ${SCRIPTS[el.dataset.v].name}`);
+    case 'preview': ui.preview = el.dataset.v; return render();
+    case 'closepreview': ui.preview = null; return render();
+    case 'setscript': ui.preview = null; if(S.script===el.dataset.v) return render(); return commit(()=>{ S.script = el.dataset.v; S.chosen=[]; if(S.script==='teensy' && S.players.length>6) resize(6); }, `Chose ${SCRIPTS[el.dataset.v].name}`);
     case 'cover': ui.show = {eyebrow:'Storyteller only', big:'Grimoire hidden'}; return render();
     case 'town': ui.show = cardTown(); return render();
     case 'scrollpanel': document.getElementById('side').scrollIntoView({behavior:'smooth'}); return;
@@ -2318,6 +2339,7 @@ document.addEventListener('keydown', e=>{
   if(e.key==='Escape'){
     if(ui.menu) ui.menu = null;
     else if(ui.show) return document.querySelector('.show')?.click();
+    else if(ui.preview) ui.preview = null;
     else if(ui.recap) ui.recap = null;
     else if(ui.pop) ui.pop = null;
     else if(ui.pick && !['starpass','mayor'].includes(ui.pick.kind)) ui.pick = null;
@@ -2443,11 +2465,10 @@ function phoneHTML(){
   const me = phone.players[phoneMe], d = DIST[phone.players.length];
   const top = !me ? `<h2>Who are you?</h2><div class="pnames">${phone.players.map((p,i)=>`<button class="btn" data-act="pme" data-i="${i}">${esc(p.name)}</button>`).join('')}</div>`
     : `<div class="pready"><div class="muted">You are</div><div class="big">${esc(me.name)}</div><button class="btn primary pbtn" data-act="pshow">${ic('eye')}Tap to see your character</button><span class="muted" style="font-size:.85rem">Wait until the Storyteller says so, and keep your screen to yourself.</span><button class="btn small" data-act="pme" data-i="">Not you? Pick again</button></div>`;
-  const group = (l,ks) => ks.length ? `<h3>${l}</h3><div class="chars">${ks.map(k=>`<div class="cbtn ${R[k].team||''}"><span class="mini">${tokenSVG(k)}</span><span class="ctext"><b>${esc(R[k].name)}</b><small>${esc(R[k].ability)}</small></span></div>`).join('')}</div>` : '';
   return `<div class="town phone"><div class="muted">${esc(phone.name)} · ${phone.players.length} players</div>${top}
     <h2 style="margin-bottom:0">Characters on this script</h2>
     ${d?`<p class="muted" style="margin:0">With ${phone.players.length} players: ${d[0]} Townsfolk, ${d[1]} Outsider${d[1]===1?'':'s'}, ${d[2]} Minion${d[2]===1?'':'s'}, ${d[3]} Demon. Characters with [brackets] change these numbers.</p>`:''}
-    ${SHEET_TEAMS.map(([t,l])=>group(l, phone.roles.filter(k=>R[k].team===t))).join('')}${group('Fabled', phone.fabled.filter(k=>R[k]))}</div>`;
+    ${charGroupsHTML(phone.roles, phone.fabled)}</div>`;
 }
 function renderPhone(){
   document.querySelector('.wrap').innerHTML = phoneHTML();
