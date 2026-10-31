@@ -27,7 +27,10 @@ header{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;justify-conte
 .hb:hover:not(:disabled),.hb.on{color:var(--ink);border-color:var(--line);background:var(--felt)}
 .hb:disabled{opacity:.35;cursor:default}
 .gwrap{position:relative}
-#gmenu .menu{position:absolute;right:0;top:calc(100% + 6px);left:auto}
+#gmenu .menu{position:absolute;right:0;top:calc(100% + 6px);left:auto;width:min(280px,calc(100vw - 32px))}
+#gmenu .menu.still{animation:none}
+#gmenu .menu button{white-space:nowrap}
+#gmenu .menu button.confirm{color:#ffb3ab;background:color-mix(in srgb,var(--demon) 14%,transparent)}
 .ccc{display:block}
 h1{font:400 1.6rem/1 var(--display);margin:0;color:var(--brass)}
 .appscript{font:400 .95rem var(--body);color:var(--muted);letter-spacing:0;text-shadow:none;margin-left:6px}
@@ -2329,12 +2332,14 @@ function render(){
   document.getElementById('undoBtn').title = undo.length ? `Undo: ${undo[undo.length-1].what}` : 'Nothing to undo';
   document.getElementById('gmenuBtn').innerHTML = ic('list')+'Game';
   document.getElementById('gmenuBtn').classList.toggle('on', !!ui.gmenu);
-  document.getElementById('gmenu').innerHTML = ui.gmenu ? `<div class="menu" role="menu">
+  const gmOpen = document.querySelector('#gmenu .menu');
+  document.getElementById('gmenu').innerHTML = ui.gmenu ? `<div class="menu${gmOpen?' still':''}" role="menu">
     <button data-act="savefile">${ic('check')}Save game to a file</button><button data-act="openfile">${ic('arrow')}Open a saved game</button>
-    <button data-act="newgame">${ic('plus')}${ui.confirmNew?'Click again to start over':'New game'}</button><hr>
+    <button data-act="newgame" class="${ui.confirmNew?'confirm':''}">${ic('plus')}${ui.confirmNew?'Sure? Click again to start over':'New game'}</button><hr>
     <button data-act="voice">${ic(voice?'sound':'mute')}Read announcements aloud: ${voice?'on':'off'}</button>
     <button data-act="tab" data-k="guide">${ic('book')}Storyteller guide</button><hr>
     <div class="cccnote muted" style="margin:2px 8px 4px"><img class="ccc" src="icons/ccc.png" alt="Community created content"><span>Fan-made. Character icons © The Pandemonium Institute.</span></div></div>` : '';
+  { const m = document.querySelector('#gmenu .menu'); if(m){ const l = m.parentElement.parentElement.getBoundingClientRect().right - m.offsetWidth; if(l<16) m.style.right = `${l-16}px`; } }
   document.getElementById('appscript').textContent = scriptName();
   document.getElementById('coverBtn').innerHTML = ic('eyeoff')+'Hide';
   document.getElementById('undoBtn').innerHTML = ic('undo')+'Undo';
