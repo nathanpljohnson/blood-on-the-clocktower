@@ -14,19 +14,29 @@
   color-scheme:dark;
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html,body{background:var(--bg);color:var(--ink)}
 body{font:15px/1.45 var(--body)}
 button,select,input,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
 :focus-visible{outline:2px solid var(--brass);outline-offset:2px}
 .wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:14px 40px;max-width:1280px;margin:0 auto}
-header{display:flex;flex-wrap:wrap;align-items:center;gap:10px;justify-content:space-between;margin-bottom:12px}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;justify-content:space-between;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.hb{background:none;border:1px solid transparent;border-radius:6px;padding:6px 10px;color:var(--muted);font-weight:500;display:inline-flex;align-items:center;line-height:1.2}
+.hb:hover:not(:disabled),.hb.on{color:var(--ink);border-color:var(--line);background:var(--felt)}
+.hb:disabled{opacity:.35;cursor:default}
+.gwrap{position:relative}
+#gmenu .menu{position:absolute;right:0;top:calc(100% + 6px);left:auto;width:min(280px,calc(100vw - 32px))}
+#gmenu .menu.still{animation:none}
+#gmenu .menu button{white-space:nowrap}
+#gmenu .menu button.confirm{color:#ffb3ab;background:color-mix(in srgb,var(--demon) 14%,transparent)}
+.ccc{display:block}
 h1{font:400 1.6rem/1 var(--display);margin:0;color:var(--brass)}
 .appscript{font:400 .95rem var(--body);color:var(--muted);letter-spacing:0;text-shadow:none;margin-left:6px}
-.hbtns{display:flex;gap:8px;flex-wrap:wrap}
-.btn{background:var(--felt2);border:1px solid var(--line);border-radius:10px;padding:8px 13px;line-height:1.2}
+.hbtns{display:flex;gap:2px;flex-wrap:wrap;align-items:center}
+.btn{background:var(--felt2);border:1px solid var(--line);border-radius:6px;padding:8px 13px;line-height:1.2}
 .btn:hover{border-color:var(--brass)}
-.btn.primary{background:var(--brass);color:#1b1608;border-color:var(--brass);font-weight:700}
+.btn.primary{background:var(--brass);color:#1b1608;border-color:var(--brass);font-weight:700;box-shadow:inset 0 -2px 0 #0003}
 .btn.big{padding:12px 18px;font-size:1.05rem;width:100%}
 .btn.small{padding:5px 10px;font-size:.88rem}
 .btn.danger{border-color:var(--demon);color:#ffb3ab}
@@ -35,7 +45,7 @@ h1{font:400 1.6rem/1 var(--display);margin:0;color:var(--brass)}
 .btn:disabled{opacity:.4;cursor:default}
 .grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:20px;align-items:start}
 @media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
-.table{background:radial-gradient(circle at 50% 48%,#3a1c18 0,#24120f 48%,#150b09 72%),var(--felt);border:1px solid var(--line);border-radius:18px;padding:10px;box-shadow:inset 0 0 60px #000c,inset 0 0 0 6px #2a1813,inset 0 0 0 7px #4a3222;transition:background .8s}
+.table{background:radial-gradient(circle at 50% 48%,#3a1c18 0,#24120f 48%,#150b09 72%),var(--felt);border:1px solid var(--line);border-radius:10px;padding:10px;box-shadow:inset 0 0 60px #000c,inset 0 0 0 6px #2a1813,inset 0 0 0 7px #4a3222;transition:background .8s}
 .circle{position:relative;width:100%;max-width:660px;aspect-ratio:1;margin:0 auto;--seat:clamp(46px,10.5vw,76px)}
 .circle::before{content:"";position:absolute;inset:8%;border-radius:50%;border:1px solid #5a402b66;box-shadow:0 0 0 6px #00000033,inset 0 0 40px #0008}
 .center{position:absolute;inset:27%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:4px}
@@ -93,7 +103,7 @@ h1{font-size:1.75rem;letter-spacing:.02em;text-shadow:0 2px 0 #000}
 .chip.poison{--k:var(--poison)}.chip.safe{--k:var(--safe)}.chip.drunk{--k:var(--warn)}.chip.info{--k:var(--brass)}.chip.muted{--k:var(--muted)}.chip.evil{--k:var(--demon)}.chip.good{--k:var(--town)}
 .chip.off{opacity:.55;text-decoration:line-through}
 .side{display:flex;flex-direction:column;gap:12px;min-width:0}
-.card{background:var(--felt);border:1px solid var(--line);border-radius:14px;padding:14px;min-width:0}
+.card{background:var(--felt);border:1px solid var(--line);border-radius:8px;padding:14px;min-width:0}
 .tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin:-4px 0 12px;overflow-x:auto}
 .tab{background:none;border:0;border-bottom:2px solid transparent;padding:6px 10px;color:var(--muted);font-weight:700;white-space:nowrap}
 .tab.on{color:var(--ink);border-color:var(--brass)}
@@ -144,13 +154,21 @@ textarea{width:100%;min-height:150px;resize:vertical}
 .rems{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px}
 .rems li{display:flex;align-items:center;gap:8px;justify-content:space-between}
 .x{background:none;border:1px solid var(--line);border-radius:6px;width:28px;height:28px;padding:0;color:var(--muted);flex:none}
-.banner{border-radius:12px;padding:10px 14px;margin-bottom:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.banner{border-radius:8px;padding:10px 14px;margin-bottom:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
 .banner.pick{background:#3a3112;border:1px solid var(--warn);font-weight:700}
 .banner.win{background:#3a1714;border:1px solid var(--demon);font:400 1.2rem var(--display)}
-.toast{background:var(--felt2);border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin-bottom:12px;font-size:.92rem;display:flex;justify-content:space-between;gap:10px;align-items:center}
+.toast{background:var(--felt2);border:1px solid var(--line);border-radius:6px;padding:8px 12px;margin-bottom:12px;font-size:.92rem;display:flex;justify-content:space-between;gap:10px;align-items:center}
 .vote{border:1px solid var(--vote);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
 .tally{font:400 2.4rem/1 var(--display);color:var(--vote);font-variant-numeric:tabular-nums}
-.noms{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:4px;font-size:.88rem}
+.noms{list-style:none;padding:0;margin:0 0 8px;display:flex;flex-direction:column;gap:4px;font-size:.9rem}
+.nom{display:grid;grid-template-columns:minmax(0,1fr) auto 6.5em;gap:10px;align-items:center;padding:5px 8px;border:1px solid var(--line);border-radius:8px}
+.nom.on{border-color:var(--demon);background:color-mix(in srgb,var(--demon) 10%,transparent)}
+.nom .who{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tallyctl{display:flex;align-items:center;gap:6px;font-variant-numeric:tabular-nums}.tallyctl b{min-width:1.6em;text-align:center;font-size:1.1rem}
+.verdict{font-size:.78rem;color:var(--muted);text-align:right}.nom.on .verdict{color:#ffb3ab;font-weight:700}
+.blockline{font-size:.9rem;margin:0 0 8px}
+.nom .votersbtn{grid-column:1/-1;justify-self:start;padding:3px 9px;font-size:.8rem}
+.fgrow{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;justify-content:space-between;border:1px solid var(--line);border-radius:8px;padding:6px 10px;margin:4px 0 8px;font-size:.9rem}
 .log{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;font-size:.88rem;max-height:520px;overflow:auto}
 .log b{color:var(--brass);font-weight:500;margin-right:6px}
 .script{display:flex;flex-direction:column;gap:6px}
@@ -183,7 +201,7 @@ textarea{width:100%;min-height:150px;resize:vertical}
 .center .clock.low{color:var(--demon)}
 .guide p,.guide li{max-width:65ch}
 .guide ol,.guide ul{margin:0 0 8px;padding-left:20px;display:flex;flex-direction:column;gap:5px}
-.tip{background:var(--felt2);border:1px solid var(--brass);border-radius:10px;padding:10px 12px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:12px}
+.tip{background:var(--felt2);border:1px solid var(--line);border-left:3px solid var(--brass);border-radius:6px;padding:10px 12px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:12px}
 .progress{height:4px;background:var(--bg);border-radius:4px;overflow:hidden;margin-bottom:10px}
 .progress span{display:block;height:100%;background:var(--brass)}
 .dock{display:none}
@@ -202,7 +220,7 @@ textarea{width:100%;min-height:150px;resize:vertical}
 .seat.dropto .tok{box-shadow:0 0 0 4px var(--brass)}
 .seat.dragging{opacity:.4}
 .seat.chosen .tok{box-shadow:0 0 0 4px var(--safe)}
-.focus{border:1px solid var(--brass);background:var(--felt2);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.focus{border:1px solid var(--brass);border-left-width:3px;background:var(--felt2);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
 .focus .eyebrow{font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 .focus .ftitle{font:400 1.8rem/1.05 var(--display);color:var(--ink)}
 .focus .wakewho{font-size:1rem}
@@ -289,16 +307,11 @@ textarea{width:100%;min-height:150px;resize:vertical}
 <div class="wrap">
   <header>
     <h1>Blood on the Clocktower <span id="appscript" class="appscript"></span></h1>
-    <img class="ccc" src="icons/ccc.png" alt="Community created content" title="Fan-made. Not an official Pandemonium Institute product. Character icons © The Pandemonium Institute.">
     <div class="hbtns">
-      <button class="btn small" data-act="voice" id="voiceBtn">Voice off</button>
-      <button class="btn small" data-act="tab" data-k="guide" id="guideBtn">Guide</button>
-      <button class="btn small" data-act="cover" id="coverBtn">Hide grimoire</button>
-      <button class="btn small" data-act="qr" id="qrBtn" hidden>Phone QR</button>
-      <button class="btn small" data-act="undo" id="undoBtn">Undo</button>
-      <button class="btn small" data-act="savefile" id="saveBtn">Save game</button>
-      <button class="btn small" data-act="openfile" id="openBtn">Open game</button>
-      <button class="btn small" data-act="newgame" id="newBtn">New game</button>
+      <button class="hb" data-act="undo" id="undoBtn">Undo</button>
+      <button class="hb" data-act="cover" id="coverBtn" title="Hide the grimoire (H)">Hide</button>
+      <button class="hb" data-act="qr" id="qrBtn" hidden>Phone QR</button>
+      <span class="gwrap"><button class="hb" data-act="gmenu" id="gmenuBtn" aria-haspopup="menu">Game</button><span id="gmenu"></span></span>
       <input type="file" id="loadFile" accept=".json,application/json" hidden>
       <input type="file" id="tokenFiles" accept="image/*" multiple hidden>
       <input type="file" id="tokenOne" accept="image/*" hidden>
@@ -763,13 +776,14 @@ function addRem(p,type,extra={}){ const d=REM[type]; p.rem.push({id:uid(),type,l
 function dropRem(type){ S.players.forEach(p=>p.rem=p.rem.filter(r=>r.type!==type)); }
 function log(t){ S.log.unshift({at:phaseLabel(),t}); }
 function save(){ try{ localStorage.setItem(KEY,JSON.stringify(S)); }catch(e){} }
-function saveUi(){ try{ localStorage.setItem(KEY+'-ui', JSON.stringify({pick:ui.pick, form:ui.form, open:ui.open})); }catch(e){} }
+function saveUi(){ try{ localStorage.setItem(KEY+'-ui', JSON.stringify({pick:ui.pick, form:ui.form, open:ui.open, rulings:ui.rulings||[]})); }catch(e){} }
 function loadUi(){
   try{ const u = JSON.parse(localStorage.getItem(KEY+'-ui')||'null'); if(!u || S.stage!=='game') return;
     const ok = id => !id || !!P(id);
     if(u.pick && ok(u.pick.actor) && (u.pick.chosen||[]).every(ok)) ui.pick = u.pick;
     if(u.form) ui.form = u.form;
     if(u.open) ui.open = u.open;
+    if(Array.isArray(u.rulings)) ui.rulings = u.rulings.filter(r=>r?.opts?.every(o=>Array.isArray(o.run)));
   }catch(e){}
 }
 const storageOK = (()=>{ try{ localStorage.setItem('tb-test','1'); localStorage.removeItem('tb-test'); return true; }catch(e){ return false; } })();
@@ -783,9 +797,22 @@ if(location.hash!=='#town' && !/^#p[-=]/.test(location.hash)){
   window.addEventListener('storage', e=>{ if(e.key===KEY && !otherTab && !townMode){ otherTab = true; render(); } });
 }
 function load(){ try{ const v=localStorage.getItem(KEY); if(v) return JSON.parse(v); }catch(e){} return null; }
-function propose(text, opts){ (ui.rulings ||= []).push({id:uid(), text, opts}); }
+// A ruling is plain data ({label, run:[op, ...args]}) so it survives reloads and undo.
+function propose(text, opts){ (ui.rulings ||= []).push({id:uid(), text, opts}); saveUi(); }
+function runOpt(o){
+  const [op, ...a] = o.run, P0 = P(a[0]);
+  switch(op){
+    case 'log': return log(a[0]);
+    case 'kill': if(P0?.alive) kill(P0, a[1], a[2]); return;
+    case 'nightKill': if(P0) nightKill(P0, a[1]); return;
+    case 'spareDie': { const [aid, tid, cause] = a, tt = P(tid), aa = P(aid); if(!tt?.alive) return; if(cause) return kill(tt, cause+', your call'); if(aa?.role==='imp' && tt===aa) return kill(tt,'star-pass'); return demonKill(aa, tt, true); }
+    case 'align': { const [id1, a1, id2, a2] = a; P(id1).align = a1; P(id2).align = a2; log(`${P(id1).name} is now ${a1} and ${P(id2).name} is now ${a2}.`); return; }
+    case 'virginExec': { if(!P0?.alive || S.day?.executed) return; log(`${P0.name} nominated the Virgin and is executed right away.`); execute(P0); ui.show = {eyebrow:'The Virgin was nominated', big:`${P0.name} is executed`, tone:'evil'}; return; }
+  }
+}
 function commit(fn, label){
   const snap = JSON.stringify(S), top = S.log[0], rulings = [...(ui.rulings||[])]; fn();
+  if(!ui.pick && S.stage==='game' && S.phase.kind==='day' && S.pending?.length){ const nx = S.pending.shift(); if(P(nx.actor)) ui.pick = nx; }
   const changed = S.log[0] && S.log[0]!==top;
   undo.push({s:snap, what: changed ? S.log[0].t : (label || 'the last change'), rulings}); if(undo.length>100) undo.shift();
   if(changed && !ui.msg) ui.msg = S.log[0].t;
@@ -901,12 +928,12 @@ function endAbility(p){
   if(k==='witch') stop('cursed',"The Witch's curse");
   if(k==='vigormortis'){ stop('vigorpoison',"The Vigormortis poison"); dropRem('undead'); }
 }
-function kill(p,cause){
+function kill(p,cause,force){
   if(!p.alive) return false;
-  if(abilityOf(p)==='fool' && !impaired(p) && !has(p,'noability')){ const pid = p.id; addRem(p,'noability');
+  if(abilityOf(p)==='fool' && !impaired(p) && !has(p,'noability') && !force){ const pid = p.id; addRem(p,'noability');
     propose(`${p.name} is the Fool and this is their first death (${cause}), so they should survive.`, [
-      {label:'They survive', fn:()=>log(`${P(pid).name} would have died (${cause}), but the Fool survives the first time.`)},
-      {label:'They die anyway', fn:()=>kill(P(pid), cause+', your call')}]);
+      {label:'They survive', run:['log', `${p.name} would have died (${cause}), but the Fool survives the first time.`]},
+      {label:'They die anyway', run:['kill', pid, cause+', your call']}]);
     return false; }
   const day = !night();
   if(p.role==='zombuul' && !impaired(p) && !has(p,'zombfirst')){
@@ -951,6 +978,11 @@ function checkWin(){
   }
   else if(a.length<=2) setWinner('Evil wins! Only two players are left alive.');
 }
+function minstrel(p){
+  const m = sober('minstrel'); if(team(p)!=='minion' || !m) return;
+  S.players.forEach(q=>{ if(q!==p && abilityOf(q)!=='minstrel') addRem(q,'drunk',{label:'Drunk (Minstrel)',expires:'dusk2'}); });
+  log('A Minion died by execution, so the Minstrel makes everyone else drunk until dusk tomorrow.');
+}
 const levActive = () => S.players.some(p=>p.alive && p.role==='leviathan' && !impaired(p));
 function execute(p){
   const d = S.day;
@@ -963,9 +995,9 @@ function execute(p){
   if(has(p,'twin') && S.players.some(q=>q.alive && q.role==='eviltwin' && !impaired(q))){ setWinner('Evil wins! The good twin was executed.'); }
   if(p.role==='goblin' && has(p,'claimed') && !impaired(p)) setWinner('Evil wins! The Goblin claimed and was executed.');
   if(!isEvil(p) && levActive()){ S.goodExecs = (S.goodExecs||0)+1; log(`Good players executed while the Leviathan lives: ${S.goodExecs}.`); if(S.goodExecs>1) setWinner('Evil wins! More than 1 good player was executed (Leviathan).'); }
-  if(team(p)==='minion' && sober('minstrel')){ S.players.forEach(q=>{ if(q!==p) addRem(q,'drunk',{label:'Drunk (Minstrel)',expires:'dusk2'}); }); log('A Minion was executed, so the Minstrel makes everyone else drunk until dusk tomorrow.'); }
   if(abilityOf(p)==='psychopath' && !impaired(p)){ d.rosh = p.id; log(`${p.name} is the Psychopath: they play roshambo with the person who nominated them, and only die if they lose.`); return; }
   const died = kill(p,'executed');
+  if(died) minstrel(p);
   const can = S.players.find(q=>q.alive && q.role==='cannibal');
   if(died && can && can!==p){
     can.as = p.role==='cannibal' ? null : p.role;
@@ -995,8 +1027,9 @@ function toNight(){
   if(!d.executed && a.length===3 && a.some(p=>p.role==='mayor'&&!impaired(p))) setWinner('Good wins! Three players left, no execution, and the Mayor lives.');
   if(!d.executed && S.players.some(p=>p.alive && p.role==='vortox' && !impaired(p))) setWinner('Evil wins! Nobody was executed while the Vortox lives.');
   if(levActive() && S.phase.n>=5) setWinner('Evil wins! Day 5 is over and the Leviathan lives.');
+  if(d.noms?.some(x=>x.votes!=null)) log(`Votes today: ${d.noms.map(x=>`${P(x.nominee)?.name} ${x.votes??'?'}`).join(', ')}.`);
   S.executedLast = d.executed;
-  S.lastDay = {died:!!d.anyDied, outsiderDied:!!d.outsiderDied, demonVoted:!!d.demonVoted, minionNominated:!!d.minionNominated};
+  S.lastDay = {died:!!d.anyDied, outsiderDied:!!d.outsiderDied, demonVoted:demonVoted(d), minionNominated:!!d.minionNominated};
   S.phase = {kind:'night',n:S.phase.n+1}; S.done={}; S.picked={}; S.pickedIds={}; S.night={changed:[]}; S.news=''; ui.form={}; ui.open=null; ui.vote=null; ui.savant=null; ui.stmts=null;
   if(!S.winner) say('Night falls. Everyone, close your eyes.');
   timer.running=false; timer.left=0;
@@ -1076,7 +1109,7 @@ const stepActor = s => s.actors.find(p=>p.alive || has(p,'diedtonight') || has(p
 
 function neighbours(p){
   const n=S.players.length, i=S.players.indexOf(p), res=[];
-  for(const dir of [-1,1]) for(let j=1;j<n;j++){ const q=S.players[((i+dir*j)%n+n)%n]; if(q===p) break; if(q.alive){res.push(q);break;} }
+  for(const dir of [-1,1]) for(let j=1;j<n;j++){ const q=S.players[((i+dir*j)%n+n)%n]; if(q===p) break; if(q.alive && !q.fake){res.push(q);break;} }
   return [...new Set(res)];
 }
 function truthFor(k,a){
@@ -1165,6 +1198,7 @@ function infoSuggest(k, a){
       if(k==='seamstress' && fx.length) add(T, `${not(ans)} (if ${fx.map(regLabel).join(' and ')})`, {ans:not(ans)});
       add(F, not(ans), {ans:not(ans)});
     }
+    if(k==='flowergirl' && ans && S.lastDay?.demonVoted!=null){ add(T, ans, {ans}); add(F, not(ans), {ans:not(ans)}); note = 'Based on what you recorded today.'; }
     if(k==='towncrier' && ans){ add(T, ans, {ans}); add(F, not(ans), {ans:not(ans)}); note = 'Based on the nominations you recorded today.'; }
   }
   if(st.info==='character' && (k!=='ravenkeeper' || S.pickedIds?.ravenkeeper)){
@@ -1220,6 +1254,7 @@ function formFor(k,a){
   if(ui.form[k]) return ui.form[k];
   const f = {};
   if(k==='towncrier') f.ans = S.lastDay?.minionNominated ? 'Yes' : 'No';
+  if(k==='flowergirl' && S.lastDay?.demonVoted!=null) f.ans = S.lastDay.demonVoted ? 'Yes' : 'No';
   return ui.form[k] = f;
 }
 
@@ -1354,6 +1389,7 @@ const PICK_TEXT = {
   nominee:'Who are they nominating? Click them.'
 };
 function pickText(pk){
+  if(pk.kind==='voters'){ const x = S.day?.noms?.[pk.i]; return `Click everyone who raised a hand for ${P(x?.nominee)?.name||'?'}: ${pk.chosen.length} so far. Click again to take one off.`; }
   if(PICK_TEXT[pk.kind]) return PICK_TEXT[pk.kind];
   const st = stepDef(pk.kind), n = st?.n||1, got = pk.chosen?.length||0, a = P(pk.actor);
   const who = pk.kind==='legion' ? 'Click the player who dies.' : `the ${a ? (pk.kind==='barber' ? 'Demon' : R[abilityOf(a)]?.name || 'player') : 'player'} points at.`;
@@ -1363,6 +1399,9 @@ function pickText(pk){
 function resolvePick(t){
   const pk = ui.pick, a = P(pk.actor), st = STEP[pk.kind] ? stepDef(pk.kind) : null;
   const err = m => { ui.msg = m; render(); };
+  if(pk.kind==='voters'){ const x = S.day?.noms?.[pk.i]; if(!x) { ui.pick = null; return render(); }
+    const ch = pk.chosen.includes(t.id) ? pk.chosen.filter(id=>id!==t.id) : [...pk.chosen, t.id];
+    ui.pick = {...pk, chosen:ch}; x.voters = ch; x.votes = ch.length; save(); return render(); }
   const rule = st?.rule || {};
   if(rule.notSelf && t===a) return err('They have to choose someone other than themself.');
   if(rule.alive && (!t.alive || t.fake)) return err(`${t.name} is dead. They must choose a living player.`);
@@ -1373,7 +1412,8 @@ function resolvePick(t){
   if(['klutz','moonchild','psychopath'].includes(pk.kind) && !t.alive) return err('Click a living player.');
   if(pk.among && !pk.among.includes(t.id)) return err('Click one of the players they chose.');
   if(pk.kind==='exorcist' && has(t,'exorcised')) return err("The Exorcist can't choose the same player as last night.");
-  if(pk.kind==='barber' && isDemon(t)) return err("The Barber swap can't include a Demon.");
+  if(pk.kind==='barber' && isDemon(t) && t!==a) return err("The Demon can swap themself, but not another Demon.");
+  if(pk.kind==='execute' && !(t.alive && !t.fake) && pk.sure!==t.id){ ui.pick = {...pk, sure:t.id}; return err(`${t.name} is already dead. Click them again to execute them anyway (it still counts as today's execution).`); }
   if(pk.kind==='execute') return commit(()=>{ ui.pick = null; execute(t); ui.show = {eyebrow:'The town has spoken', big:`${t.name} is executed`, tone:'evil'}; });
   if(pk.kind==='execfail') return commit(()=>{ ui.pick = null; S.day.executed = t.id; addRem(t,'executed'); S.news = `${t.name} was executed, but nothing happened.`; log(`${t.name} is executed, but only evil players voted, so the execution fails (Legion). Nobody dies.`); });
   if(pk.kind==='nominator'){
@@ -1417,8 +1457,8 @@ function nightKill(t, cause){
 function spare(a, t, reason, cause){
   const aid = a?.id, tid = t.id;
   propose(`${reason}, so ${t.name} should not die.`, [
-    {label:'Nobody dies', fn:()=>log(`${reason}. Nobody dies.`)},
-    {label:`${t.name} dies anyway`, fn:()=>{ const tt = P(tid), aa = P(aid); if(!tt?.alive) return; if(cause) return kill(tt, cause+', your call'); if(aa?.role==='imp' && tt===aa) return kill(tt,'star-pass'); demonKill(aa, tt, true); }}]);
+    {label:'Nobody dies', run:['log', `${reason}. Nobody dies.`]},
+    {label:`${t.name} dies anyway`, run:['spareDie', aid, tid, cause||null]}]);
   return false;
 }
 function demonHit(a, t){
@@ -1475,7 +1515,7 @@ function act(kind, a, ts, pk){
     case 'mayor': kill(t, t.id===pk.target ? 'killed by the Demon' : 'killed instead of the Mayor'); break;
     case 'slayer':
       addRem(a,'noability');
-      { const tid = t.id, dies = {label:`${t.name} dies`, fn:()=>kill(P(tid),'shot by the Slayer')}, none = {label:'Nothing happens', fn:()=>log(`The Slayer shoots ${P(tid).name}. Nothing happens.`)};
+      { const dies = {label:`${t.name} dies`, run:['kill', t.id, 'shot by the Slayer']}, none = {label:'Nothing happens', run:['log', `The Slayer shoots ${t.name}. Nothing happens.`]};
         if(isDemon(t) && sob) propose(`The Slayer shot the Demon, so ${t.name} should die.`, [dies, none]);
         else if(sob && abilityOf(t)==='recluse' && !impaired(t)) propose(`The Slayer shot the Recluse. Nothing should happen, unless they register as the Demon.`, [none, dies]);
         else log(`The Slayer shoots ${t.name}. Nothing happens.`); }
@@ -1514,7 +1554,7 @@ function act(kind, a, ts, pk){
     case 'cerenovus': { const k = ui.form.cerenovus?.role || pool('townsfolk')[0]; dropRem('cmad'); addRem(t,'cmad',{label:`Mad: ${R[k].name}`, k, off:!sob}); log(`Cerenovus ${a.name} chose ${t.name}: mad about being the ${R[k].name} tomorrow.${sob?'':' (No effect: drunk or poisoned. Show them anyway.)'}`); break; }
     case 'harpy': dropRem('hmad'); dropRem('hsecond'); addRem(t,'hmad',{label:`Mad: ${u.name} is evil`, off:!sob}); addRem(u,'hsecond',{off:!sob}); log(`Harpy ${a.name} chose ${t.name} and ${u.name}: ${t.name} must be mad that ${u.name} is evil.`); break;
     case 'dreamer': {
-      const ev = isEvil(t), g = ev ? rnd(pool('townsfolk').concat(pool('outsider')).filter(k=>k!==t.role)) : seen(t), e = ev ? t.role : rnd(pool('minion').concat(pool('demon')));
+      const ev = isEvil(t), g = ev ? rnd(pool('townsfolk').concat(pool('outsider')).filter(k=>k!==t.role)) : t.role, e = ev ? t.role : rnd(pool('minion').concat(pool('demon')));
       ui.form.dreamer = {g: g || 'washerwoman', e: e || 'imp'}; log(`Dreamer ${a.name} picked ${t.name} (${roleLabel(t)}).${sob?'':' They are drunk or poisoned, so both may be wrong.'}`); break; }
     case 'seamstress': { addRem(a,'noability'); const ans = regEvil(t)===regEvil(u) ? 'Yes' : 'No'; (ui.form.seamstress ||= {}).ans = ans; log(`Seamstress ${a.name} picked ${t.name} and ${u.name}. True answer: ${ans}.`); break; }
     case 'ogre': a.align = isEvil(t) ? 'evil' : 'good'; log(`Ogre ${a.name} chose ${t.name}, so the Ogre is now ${a.align}. They don't know this.`); break;
@@ -1525,7 +1565,7 @@ function act(kind, a, ts, pk){
       ui.pick = {kind:'innkeeperdrunk', actor:a.id, among:[t.id,u.id]}; break;
     case 'innkeeperdrunk': addRem(t,'drunk',{label:'Drunk (Innkeeper)',expires:'dusk'}); log(`${t.name} is drunk until dusk (Innkeeper).`); break;
     case 'gambler': { const k = ui.form.gambler?.role; log(`Gambler ${a.name} guessed ${t.name} is the ${R[k]?.name||'?'}.`);
-      if(k && t.role!==k && sob){ const aid = a.id; propose(`${a.name} guessed wrong, so the Gambler should die.`, [{label:`${a.name} dies`, fn:()=>nightKill(P(aid),'guessed wrong')}, {label:'They live', fn:()=>log(`The Gambler guessed wrong, but you ruled they live.`)}]); }
+      if(k && t.role!==k && sob){ propose(`${a.name} guessed wrong, so the Gambler should die.`, [{label:`${a.name} dies`, run:['nightKill', a.id, 'guessed wrong']}, {label:'They live', run:['log', 'The Gambler guessed wrong, but you ruled they live.']}]); }
       else if(k && t.role!==k) log('Wrong, but the Gambler is drunk or poisoned, so they live.'); else log('Right: nothing happens.'); break; }
     case 'pithag': { const k = ui.form.pithag?.role;
       if(!k) break;
@@ -1542,7 +1582,7 @@ function act(kind, a, ts, pk){
       else if(nightKill(t,'killed by the Lycanthrope')) S.night.lyc = true;
       break;
     case 'alhadikhia': log(`Al-Hadikhia ${a.name} chose ${ts.map(q=>q.name).join(', ')}. Announce these names, then ask each in turn.`); ui.form.alhadikhia = {ids:ts.map(q=>q.id), live:{}}; break;
-    case 'assassin': addRem(a,'noability'); log(`Assassin ${a.name} chose ${t.name}.`); if(sob) kill(t,'killed by the Assassin'); else log('The Assassin is drunk or poisoned, so nothing happens.'); break;
+    case 'assassin': addRem(a,'noability'); log(`Assassin ${a.name} chose ${t.name}.`); if(sob) kill(t,'killed by the Assassin',true); else log('The Assassin is drunk or poisoned, so nothing happens.'); break;
     case 'barber': {
       if(!sob) { log('The Demon is drunk or poisoned, so nothing swaps.'); break; }
       const keep = q => q.align || (isEvil(q) ? 'evil' : 'good');
@@ -1550,7 +1590,12 @@ function act(kind, a, ts, pk){
       endAbility(t); endAbility(u);
       [t.role,u.role] = [u.role,t.role]; [t.shown,u.shown] = [u.shown,t.shown]; t.as = null; u.as = null; t.align = ta; u.align = ua;
       changed(t,'barber'); changed(u,'barber'); S.haircut = null;
-      log(`Barber: ${t.name} is now the ${R[t.role].name} and ${u.name} is now the ${R[u.role].name}. Their teams stay the same.`); break; }
+      log(`Barber: ${t.name} is now the ${R[t.role].name} and ${u.name} is now the ${R[u.role].name}. Their teams stay the same.`);
+      { const gd = [t,u].find(q=>isDemon(q) && !isEvil(q)), ev = gd && [t,u].find(q=>q!==gd);
+        if(gd) propose(`${gd.name} now holds the ${R[gd.role].name} but is still good, because the Barber swaps characters, not teams. ${ev.name} is now an evil ${R[ev.role].name}.`, [
+          {label:'Keep the rules: teams stay', run:['log', `You kept the teams: ${gd.name} is a good ${R[gd.role].name}.`]},
+          {label:`Swap teams too: ${gd.name} evil, ${ev.name} good`, run:['align', gd.id, 'evil', ev.id, 'good']}]); }
+      break; }
     case 'sweetheart': (S.flags ||= {}).sweet = true; addRem(t,'drunk',{label:'Drunk (Sweetheart)'}); log(`${t.name} is drunk for the rest of the game (Sweetheart).`); break;
     case 'professor': addRem(a,'noability');
       if(sob && team(t)==='townsfolk'){ t.alive = true; t.ghost = true; t.rem = t.rem.filter(r=>r.type!=='diedtonight'); log(`Professor ${a.name} brings ${t.name} back to life.`); }
@@ -1564,18 +1609,18 @@ function nominate(nr,ne){
   const d = S.day;
   commit(()=>{
     ui.pick = null;
-    d.noms.push({nominator:nr.id, nominee:ne.id});
+    d.noms.push({nominator:nr.id, nominee:ne.id, votes:null});
     if(team(nr)==='minion') d.minionNominated = true;
     log(`${nr.name} nominates ${ne.name}.`);
     const nrid = nr.id, neid = ne.id;
     if(abilityOf(nr)==='golem' && !has(nr,'noability')){ addRem(nr,'noability');
-      if(!impaired(nr) && !isDemon(ne)) propose(`The Golem nominated ${ne.name}, who is not the Demon, so they should die.`, [{label:`${ne.name} dies`, fn:()=>kill(P(neid),'killed by the Golem')}, {label:'Nothing happens', fn:()=>log(`The Golem nominated ${P(neid).name}. You ruled nothing happens.`)}]);
+      if(!impaired(nr) && !isDemon(ne)) propose(`The Golem nominated ${ne.name}, who is not the Demon, so they should die.`, [{label:`${ne.name} dies`, run:['kill', neid, 'killed by the Golem']}, {label:'Nothing happens', run:['log', `The Golem nominated ${ne.name}. You ruled nothing happens.`]}]);
       else log(`The Golem nominated ${ne.name}. ${isDemon(ne)?'They are the Demon, so':'The Golem is drunk or poisoned, so'} nothing happens.`); }
-    if(has(nr,'cursed') && sober('witch') && alive().length>3) propose(`${nr.name} was cursed by the Witch and nominated, so they should die.`, [{label:`${nr.name} dies`, fn:()=>kill(P(nrid),'cursed by the Witch for nominating')}, {label:'Nothing happens', fn:()=>log(`${P(nrid).name} was cursed but you ruled nothing happens.`)}]);
+    if(has(nr,'cursed') && sober('witch') && alive().length>3) propose(`${nr.name} was cursed by the Witch and nominated, so they should die.`, [{label:`${nr.name} dies`, run:['kill', nrid, 'cursed by the Witch for nominating']}, {label:'Nothing happens', run:['log', `${nr.name} was cursed but you ruled nothing happens.`]}]);
     if(wake(ne)==='virgin' && !has(ne,'noability')){
       addRem(ne,'noability');
-      const ex = {label:`Execute ${nr.name}`, fn:()=>{ const q = P(nrid); if(!q?.alive || S.day.executed) return; log(`${q.name} nominated the Virgin and is executed right away.`); execute(q); ui.show = {eyebrow:'The Virgin was nominated', big:`${q.name} is executed`, tone:'evil'}; }};
-      const none = {label:'Nothing happens', fn:()=>log(`${P(nrid).name} nominated the Virgin. Nothing happens.`)};
+      const ex = {label:`Execute ${nr.name}`, run:['virginExec', nrid]};
+      const none = {label:'Nothing happens', run:['log', `${nr.name} nominated the Virgin. Nothing happens.`]};
       if(!impaired(ne) && team(nr)==='townsfolk' && nr.alive) propose(`${nr.name} nominated the Virgin and is a Townsfolk, so they should be executed right away.`, [ex, none]);
       else if(!impaired(ne) && nr.alive && abilityOf(nr)==='spy' && !impaired(nr)) propose(`The Spy nominated the Virgin. Nothing should happen, unless the Spy registers as a Townsfolk.`, [none, ex]);
       else log(`${nr.name} nominated the Virgin. Nothing happens.`);
@@ -1610,10 +1655,25 @@ function centerHTML(){
   const ghosts = S.players.filter(p=>(!p.alive||p.fake)&&p.ghost).length;
   return `<div class="center"><div class="ph">${ph.kind==='night'?'Night':'Day'} ${ph.n}</div>
     <div class="stat">${a} alive${ghosts?` · ${ghosts} ghost vote${ghosts>1?'s':''}`:''}</div>
-    ${ph.kind==='day'?`<div class="stat"><b>${dayNeed()}</b>votes to execute</div>`:''}
+    ${ph.kind==='day'?(blockOf()?.id?`<div class="stat"><b>${esc(P(blockOf().id).name)}</b>on the block · ${blockOf().votes}</div>`:`<div class="stat"><b>${dayNeed()}</b>votes for the block</div>`):''}
     ${ph.kind==='day'&&timerOn()?`<div class="clock ${timerLeft()<30000?'low':''}" data-timer>${fmt(timerLeft())}</div>`:''}</div>`;
 }
 const dayNeed = needed;
+const flowergirlIn = () => S.players.some(p=>wake(p)==='flowergirl' || hasAbility(p,'flowergirl'));
+// Flowergirl answer: your own Yes/No wins; otherwise worked out from voters you marked; otherwise unknown (null).
+function demonVoted(d = S.day){
+  if(!d) return null; if(d.dvManual!=null) return d.dvManual;
+  const marked = (d.noms||[]).filter(x=>x.voters); if(!marked.length) return null;
+  return marked.some(x=>x.voters.some(id=>P(id) && isDemon(P(id))));
+}
+// Who is about to die: the highest vote total that reached the threshold. A tie at the top means nobody.
+function blockOf(){
+  const noms = (S.day?.noms||[]).filter(x=>x.votes!=null && x.votes>=needed());
+  if(!noms.length) return null;
+  const top = Math.max(...noms.map(x=>x.votes)), at = noms.filter(x=>x.votes===top);
+  return at.length===1 ? {id:at[0].nominee, votes:top} : {id:null, votes:top};
+}
+const dupNames = () => { const seen0 = new Set(), d = new Set(); S.players.forEach(p=>{ const k = p.name.trim().toLowerCase(); if(seen0.has(k)) d.add(p.name); seen0.add(k); }); return [...d]; };
 
 function setupHTML(){
   const idx = STAGES.findIndex(s=>s[0]===S.stage);
@@ -1635,7 +1695,8 @@ function setupHTML(){
       <label class="f">Number of players<select id="count" data-change="count">${counts.map(v=>`<option ${v===n?'selected':''}>${v}</option>`).join('')}</select></label>
       <p class="muted" style="margin-top:8px">${t} Townsfolk · ${o} Outsider${o===1?'':'s'} · ${m} Minion${m>1?'s':''} · ${d} Demon${n<=6?(evilInfo()?'. The Toymaker gives evil their normal info even with 5 or 6 players.':'. With 6 or fewer players, Minions and the Demon do not learn each other.'):''}</p>
       <p class="muted" style="margin:0 0 6px">You can also drag seats on the table to change the order.</p><label class="f">Names, clockwise around the table<textarea id="names" data-change="names">${esc(S.players.map(p=>p.name).join('\n'))}</textarea></label>
-      <div style="margin-top:12px"><button class="btn primary big" data-act="stage" data-to="chars">Next: choose characters</button></div>`;
+      ${dupNames().length?`<p class="warn">Two players are called ${esc(dupNames().join(', '))}. Give everyone a different name so phones and the record can tell them apart.</p>`:''}
+      <div style="margin-top:12px"><button class="btn primary big" data-act="stage" data-to="chars" ${dupNames().length?'disabled':''}>Next: choose characters</button></div>`;
   }
   if(S.stage==='chars'){
     const tg = targets(), total = bagTotal(), ok = bagOK();
@@ -1674,7 +1735,7 @@ function setupHTML(){
     if(S.players.some(p=>p.role==='eviltwin')) mark('twin','twin',"Evil Twin's good twin");
     if(S.players.some(p=>p.role==='bountyhunter')) mark('eviltf','eviltf','The evil Townsfolk (Bounty Hunter)');
     return head + `<h2>Seats are dealt</h2>
-      <p class="muted">Characters were shuffled into seats like drawing from a bag. Click a seat to swap a character by hand.</p>
+      <p class="muted">Shuffled into seats at random. Click a seat to change a character.</p>
       <div class="row"><button class="btn small" data-act="redeal">Shuffle again</button></div>
       ${parts.join('')}
       ${evilInfo()?`<h3>Demon bluffs</h3>${bluffPickHTML()}${S.bluffs.length<3?`<p class="muted">${S.bluffs.length ? `Only ${S.bluffs.length} good character${S.bluffs.length===1?' is':'s are'} left out of play on this script, so that's all the Demon can get.` : 'Every good character on this script is in play, so the Demon gets no bluffs.'}</p>`:''}`:''}
@@ -1683,7 +1744,7 @@ function setupHTML(){
   if(S.stage==='reveal'){
     const next = S.players.find(p=>!p.revealed);
     return head + `<h2>Hand out characters</h2>
-      <p class="muted">Turn the screen to each player in turn. They click to see their character, then click again to hide it.</p>
+      <p class="muted">Turn the screen to each player. They click to see their character and click again to hide it.</p>
       <div class="tip" style="flex-direction:column;align-items:flex-start;margin-bottom:12px"><b>Or use phones</b><span class="muted" style="font-size:.85rem">Everyone scans one QR code, picks their name, and taps to see their character. Their phone also lists every character on the script.</span>
         <div class="row"><button class="btn small primary" data-act="qr">Show QR code</button><button class="btn small" data-act="qrcopy">Copy link</button></div></div>
       ${next?`<button class="btn primary big" data-act="reveal" data-id="${next.id}">Show ${esc(next.name)}'s character</button>`:'<p>Everyone has seen their character.</p>'}
@@ -1876,7 +1937,7 @@ function stepBody(s){
       const ans = liveAns(s.k);
       if(s.k==='fortuneteller'){ const rh = S.players.filter(p=>has(p,'redherring')); parts.push(`<div class="truth">${ans?`True answer: <b>${ans}</b>.`:'Yes if either is'} the Demon (${names(S.players.filter(isDemon))}) or the red herring (${rh.length?names(rh):'not set'}). A Recluse may also count.</div>`); }
       else if(s.k==='towncrier') parts.push(`<div class="truth">Based on the nominations you recorded: <b>${ans}</b>. If you didn't record them all, use what you saw.</div>`);
-      else if(s.k==='flowergirl') parts.push(`<div class="truth">Did the Demon (${names(S.players.filter(isDemon))}) vote today? You saw the votes.</div>`);
+      else if(s.k==='flowergirl') parts.push(`<div class="truth">${S.lastDay?.demonVoted!=null?`From what you recorded today: <b>${ans}</b>.`:`Did the Demon (${names(S.players.filter(isDemon))}) vote today? Nothing was recorded, so use what you saw.`}</div>`);
       else parts.push(`<div class="truth">True answer: <b>${ans||'?'}</b>.</div>`);
       parts.push(suggHTML(s.k, a));
       parts.push(`<div class="row"><button class="btn ${ans==='Yes'?'primary':'good'}" data-act="showyn" data-k="${s.k}" data-v="Yes">${ic('eye')}Show YES</button><button class="btn ${ans==='No'?'primary':'good'}" data-act="showyn" data-k="${s.k}" data-v="No">${ic('eye')}Show NO</button>${s.k==='fortuneteller'?'<button class="btn small" data-act="pick" data-kind="redherring">Move red herring</button>':''}</div>`);
@@ -1937,7 +1998,7 @@ function nightHTML(){
   return `<h2>Night ${S.phase.n}</h2>
     <div class="progress"><span style="width:${active.length?doneN/active.length*100:100}%"></span></div>
     ${card}
-    <div class="legend"><span>${ic('eye')}shows a screen to a player</span><span>${ic('target')}click the seat they point at</span><span>Enter = Done · Esc = close</span></div>
+    <div class="legend"><span>${ic('eye')}show a player</span><span>${ic('target')}click their pick</span><span>Enter: Done · Esc: close · H: hide</span></div>
     <h3>Tonight so far</h3>${phaseRecap(phaseLabel())}
     <h3>Night order</h3>
     <button class="btn small orderbtn" data-act="toggleorder"><span>${ic('list')}${doneN} of ${active.length} done</span><span>${ui.showOrder?'Hide':'Show all'}</span></button>
@@ -1949,23 +2010,28 @@ function dayHTML(){
   const d = S.day, a = voters().length;
   const dead = S.players.filter(p=>!p.alive || p.fake), ghosts = dead.filter(p=>p.ghost).length;
   const parts = [`<h2>Day ${S.phase.n}</h2>`];
-  parts.push(`<div class="counts" style="grid-template-columns:repeat(3,minmax(0,1fr))"><div><b>${a}</b>alive</div><div><b>${needed()}</b>votes needed to pass</div><div><b>${ghosts}</b>ghost vote${ghosts===1?'':'s'} left</div></div>`);
-  parts.push(`<p class="muted" style="margin-top:0">A nomination needs at least ${needed()} votes (half the living, rounded up). If someone is already on the block, the next one has to beat their total; a tie means nobody is executed.</p>`);
+  parts.push(`<div class="counts" style="grid-template-columns:repeat(3,minmax(0,1fr))"><div><b>${a}</b>alive</div><div><b>${needed()}</b>votes to put on the block</div><div><b>${ghosts}</b>ghost vote${ghosts===1?'':'s'} left</div></div>`);
   const notes = [];
   const butler = S.players.find(p=>wake(p)==='butler' && p.alive); if(butler) notes.push(`${butler.name} (Butler) may only vote if their master votes too.`);
   const zealot = S.players.find(p=>p.alive && wake(p)==='zealot' && !impaired(p)); if(zealot && alive().length>=5) notes.push(`${zealot.name} (Zealot) must vote for every nomination.`);
   S.players.filter(p=>has(p,'banshee')).forEach(b=>notes.push(`${b.name} (Banshee) may nominate twice today and vote twice per nomination.`));
   if(S.players.some(p=>p.alive && p.role==='legion' && !impaired(p))) notes.push('Legion: if only evil players voted for the executed player, the execution fails. Use "Execution fails" below.');
   if(notes.length) parts.push(`<ul class="recapl">${notes.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`);
-  parts.push(`<div class="row" style="margin-bottom:10px"><button class="btn small" data-act="town">${ic('people')}Show the town</button><span class="muted" style="font-size:.82rem">Players who open this page's link see only this public view.</span></div>`);
+  parts.push(`<div class="row" style="margin-bottom:10px"><button class="btn small" data-act="town">${ic('people')}Show the town</button></div>`);
   if(!d.executed) parts.push(`<h3 style="margin-top:4px">Talking time</h3>${timerHTML()}<div style="height:10px"></div>`);
   if(dead.length) parts.push(`<h3>Ghost votes</h3><p class="muted" style="margin:0 0 6px">Click a dead player when they use their one vote.</p><div class="row">${dead.map(p=>`<button class="btn small ${p.ghost?'primary':''}" data-act="ghost" data-id="${p.id}" title="${p.ghost?'Click when they use it':'Click to give it back'}">${ic('hand')}${esc(p.name)}: ${p.ghost?'has vote':'used'}</button>`).join('')}</div>`);
-  const nomWatch = S.players.some(p=>p.alive && ((wake(p)==='virgin' && !has(p,'noability')) || has(p,'cursed') || (abilityOf(p)==='golem' && !has(p,'noability')) || wake(p)==='towncrier'));
-  if(nomWatch && !d.executed && !S.winner){
-    const who = [...new Set(S.players.filter(p=>p.alive).map(p=>wake(p)==='virgin'&&!has(p,'noability')?'Virgin':has(p,'cursed')?'Witch':abilityOf(p)==='golem'&&!has(p,'noability')?'Golem':wake(p)==='towncrier'?'Town Crier':null).filter(Boolean))];
-    parts.push(`<h3>Nominations (optional)</h3><p class="muted" style="margin:0 0 6px">The ${who.join(', ')} ${who.length>1?'react':'reacts'} to nominations. Record them here and the app handles it. Votes are up to you.</p><button class="btn small" data-act="pick" data-kind="nominator">${ic('hand')}Record a nomination</button>`);
+  if(!S.winner){
+    const blk = blockOf(), need = needed(), fg = flowergirlIn();
+    const row = (x,i) => { const v = x.votes, pass = v!=null && v>=need, on = blk?.id===x.nominee && pass;
+      return `<li class="nom ${on?'on':''}"><span class="who">${esc(P(x.nominator)?.name)} <span class="muted">→</span> <b>${esc(P(x.nominee)?.name)}</b></span>
+        <span class="tallyctl">${d.executed?`<b>${v??'–'}</b>`:`<button class="x" data-act="votes" data-i="${i}" data-d="-1" aria-label="One vote fewer">${ic('minus')}</button><b>${v??'–'}</b><button class="x" data-act="votes" data-i="${i}" data-d="1" aria-label="One more vote">${ic('plus')}</button>`}</span>
+        <span class="verdict">${v==null?'<span class="muted">count the hands</span>':on?'on the block':pass?(blk?.id===null&&v===blk.votes?'tied':'beaten'):'too few'}</span>
+        ${fg && !d.executed?`<button class="btn small votersbtn ${ui.pick?.kind==='voters'&&ui.pick.i===i?'primary':''}" data-act="markvoters" data-i="${i}">${ic('hand')}${x.voters?`${x.voters.length} marked`:'Who voted'}</button>`:''}</li>`; };
+    const blkLine = !blk ? `Nobody is on the block. ${need} votes puts someone there.` : blk.id ? `<b>${esc(P(blk.id).name)}</b> is on the block with ${blk.votes}. ${blk.votes+1} replaces them; ${blk.votes} ties and frees them.` : `Tied at ${blk.votes}: nobody is on the block. ${blk.votes+1} puts someone there.`;
+    parts.push(`<h3>Nominations</h3>${d.noms.length?`<ul class="noms">${d.noms.map(row).join('')}</ul>`:''}<p class="blockline">${blkLine}</p>${d.executed?'':`<button class="btn small" data-act="pick" data-kind="nominator">${ic('hand')}New nomination</button>`}`);
+    if(fg){ const dv = demonVoted(), how = d.dvManual!=null ? 'your answer' : dv!=null ? 'from the voters you marked' : 'not recorded';
+      parts.push(`<div class="fgrow"><span>Flowergirl: did the Demon vote today? <b>${dv==null?'–':dv?'Yes':'No'}</b> <span class="muted">(${how})</span></span><span class="row"><button class="btn small ${d.dvManual===true?'primary':''}" data-act="dv" data-v="yes">Yes</button><button class="btn small ${d.dvManual===false?'primary':''}" data-act="dv" data-v="no">No</button>${d.dvManual!=null?'<button class="btn small" data-act="dv" data-v="auto">Clear</button>':''}</span></div>`); }
   }
-  if(d.noms.length) parts.push(`<ul class="noms">${d.noms.map(x=>`<li>${esc(P(x.nominator).name)} nominated ${esc(P(x.nominee).name)}</li>`).join('')}</ul>`);
   const slayer = S.players.find(p=>p.alive && wake(p)==='slayer' && !p.rem.some(r=>r.type==='noability'));
   if(slayer) parts.push(`<h3>Slayer</h3><button class="btn small" data-act="pick" data-kind="slayer" data-actor="${slayer.id}">${ic('target')}${esc(slayer.name)} shoots someone</button>`);
   const psy = S.players.find(p=>p.alive && wake(p)==='psychopath');
@@ -1981,6 +2047,7 @@ function dayHTML(){
   if(a===3 && S.players.some(p=>p.alive&&p.role==='mayor'&&!impaired(p))) parts.push('<p class="warn">Three players left and the Mayor lives: if nobody is executed today, good wins.</p>');
   parts.push('<h3>End of day</h3>');
   if(d.executed) parts.push(`<p>${esc(P(d.executed).name)} was executed.</p>`);
+  else if(!S.winner && blockOf()?.id) parts.push(`<div class="row"><button class="btn danger big" style="flex:1" data-act="execute" data-id="${blockOf().id}">${ic('cross')}Execute ${esc(P(blockOf().id).name)}</button><button class="btn" data-act="pick" data-kind="execute">Someone else</button></div>`);
   else if(!S.winner) parts.push(`<div class="row"><button class="btn danger big" style="flex:1" data-act="pick" data-kind="execute">${ic('cross')}Execute someone</button>${S.players.some(p=>p.alive && p.role==='legion')?`<button class="btn" data-act="pick" data-kind="execfail">Execution fails</button>`:''}</div>`);
   parts.push(`<div style="margin-top:8px"><button class="btn ${d.executed?'primary':''} big" data-act="advance">${ic('moon')}${d.executed?'':'No execution: '}Night falls</button></div>`);
   parts.push(`<h3>Today so far</h3>${phaseRecap(phaseLabel())}`);
@@ -2060,6 +2127,15 @@ function menuHTML(){
   const left = Math.min(m.x, innerWidth-230), top = Math.min(m.y, innerHeight-40-items.length*36);
   return `<div class="menu" role="menu" style="left:${Math.max(8,left)}px;top:${Math.max(8,top)}px"><div class="mh">${esc(p.name)}</div>${items.join('')}</div>`;
 }
+// What ending the day right now would do, so a misclick can't end the game unannounced.
+function duskWarnings(){
+  const w = [], d = S.day||{}, a = alive();
+  if(S.winner || S.phase.kind!=='day') return w;
+  if(!d.executed && a.length===3 && a.some(p=>p.role==='mayor' && !impaired(p))) w.push('Good wins: 3 players live, nobody was executed, and the Mayor is alive.');
+  if(!d.executed && S.players.some(p=>p.alive && p.role==='vortox' && !impaired(p))) w.push('Evil wins: nobody was executed while the Vortox lives.');
+  if(levActive() && S.phase.n>=5) w.push('Evil wins: day 5 is over and the Leviathan lives.');
+  return w;
+}
 function recapHTML(){
   if(!ui.recap) return '';
   const night = ui.recap==='night';
@@ -2069,6 +2145,7 @@ function recapHTML(){
   return `<div class="recap" data-act="closerecap"><div class="card" data-stop="1">
     <h2>${night?'Night':'Day'} ${S.phase.n} recap</h2>
     ${night?`<p style="font-size:1.1rem">${died.length?`To announce: <b>${esc(died.join(' and '))}</b> died.`:'To announce: <b>nobody died</b>.'}</p>`:`<p style="font-size:1.1rem">${S.day.executed?`<b>${esc(P(S.day.executed).name)}</b> was executed.`:'<b>Nobody</b> was executed.'}</p>`}
+    ${night?'':duskWarnings().map(x=>`<p class="warn" style="font-size:1rem">${esc(x)} Press Undo afterwards if that's wrong.</p>`).join('')}
     <h3>What happened</h3>${phaseRecap(phaseLabel())}
     ${effects.length?`<h3>Still in effect</h3><ul class="recapl">${effects.map(e=>`<li>${esc(e)}</li>`).join('')}</ul>`:''}
     <div class="row" style="margin-top:6px"><button class="btn" data-act="closerecap">${ic('back')}Not yet</button>
@@ -2167,14 +2244,14 @@ function guideHTML(){
       <li>Never let anyone see the grimoire. Press "Hide grimoire" (or H) whenever you step away from the screen.</li></ul></div>`;
 }
 function cardTown(){
-  const a = alive().length, b = S.day?.block;
+  const a = alive().length, b = S.phase.kind==='day' ? blockOf() : null;
   return {eyebrow:`${S.phase.kind==='day'?'Day':'Night'} ${S.phase.n} · ${a} alive · ${needed()} votes to execute`,
     list:S.players.map(p=>p.alive&&!p.fake?p.name:`✝ ${p.name}${p.ghost?' · 1 vote':''}`),
-    sub:b?.id?`On the block: ${P(b.id).name} with ${b.votes} votes`:''};
+    sub:b ? (b.id ? `On the block: ${P(b.id).name} with ${b.votes} votes` : `Tied at ${b.votes} votes: nobody is on the block`) : ''};
 }
 function dockHTML(){
   if(S.stage!=='game' || ui.show) return '';
-  if(ui.pick) return `<button class="btn" data-act="cancelpick">Cancel</button>`;
+  if(ui.pick) return `<button class="btn ${ui.pick.kind==='voters'?'primary':''}" data-act="cancelpick">${ui.pick.kind==='voters'?'Done marking votes':'Cancel'}</button>`;
   if(S.phase.kind==='night'){
     const cur = currentStep(steps());
     if(!cur) return `<button class="btn primary" data-act="advance">Everyone wakes: start day ${S.phase.n}</button>`;
@@ -2182,7 +2259,7 @@ function dockHTML(){
     return `<button class="btn" data-act="scrollpanel">${esc(t)} ↓</button><button class="btn primary" data-act="done" data-k="${cur.k}">Done</button>`;
   }
   if(S.day.executed || S.winner) return `<button class="btn primary" data-act="advance">Night falls</button>`;
-  return `${timerOn()?`<span class="timer ${timerLeft()<30000?'low':''}" data-timer>${fmt(timerLeft())}</span>`:''}<span>${needed()} votes to pass</span><button class="btn danger" data-act="pick" data-kind="execute">Execute someone</button><button class="btn" data-act="advance">Night falls</button>`;
+  return `${timerOn()?`<span class="timer ${timerLeft()<30000?'low':''}" data-timer>${fmt(timerLeft())}</span>`:''}<span>${blockOf()?.id?`${esc(P(blockOf().id).name)} on the block`:`${needed()} to pass`}</span>${blockOf()?.id?`<button class="btn danger" data-act="execute" data-id="${blockOf().id}">Execute</button>`:`<button class="btn danger" data-act="pick" data-kind="execute">Execute…</button>`}<button class="btn" data-act="advance">Night falls</button>`;
 }
 
 const SPY_HIDE = ['diedtonight','executed','bydemon','becameimp','custom'];
@@ -2228,8 +2305,10 @@ function render(){
   if(!storageOK && (S.stage!=='players' || S.log.length)) b.push(`<div class="banner pick"><span>This browser isn't keeping the game between visits (a private window, or storage is blocked). Press "Save game" now and then so you can't lose it.</span></div>`);
   if(S.winner) b.push(`<div class="banner win"><span>${esc(S.winner)}</span><span class="row"><button class="btn small primary" data-act="final">Reveal everyone</button><button class="btn small" data-act="tab" data-k="log">Game record</button><button class="btn small" data-act="clearwin">Keep playing</button></span></div>`);
   if(S.stage!=='game') ui.rulings = [];
+  if(S.stage==='game' && !S.winner && !alive().some(isDemon) && ui.pick?.kind!=='starpass' && !S.flags?.twins && !(ui.rulings||[]).length)
+    b.push(`<div class="banner pick"><span>Nobody alive is the Demon. If that's a mistake, fix a character on the Player tab or press Undo.</span><span class="row"><button class="btn small" data-act="goodwins">Good wins</button><button class="btn small" data-act="undo">Undo</button></span></div>`);
   (ui.rulings||[]).forEach(r=>b.push(`<div class="banner pick ruling"><span>${ic('book')}<b>Your call:</b> ${esc(r.text)}</span><span class="row">${r.opts.map((o,i)=>`<button class="btn small ${i===0?'primary':''}" data-act="rule" data-id="${r.id}" data-i="${i}" ${i===0?'title="What the rules say"':''}>${esc(o.label)}</button>`).join('')}</span></div>`));
-  if(ui.pick) b.push(`<div class="banner pick"><span>${ic('target')}${esc(pickText(ui.pick))}</span>${['starpass','mayor'].includes(ui.pick.kind)?'':'<button class="btn small" data-act="cancelpick">Cancel</button>'}</div>`);
+  if(ui.pick) b.push(`<div class="banner pick"><span>${ic('target')}${esc(pickText(ui.pick))}</span>${['starpass','mayor'].includes(ui.pick.kind)?'':`<button class="btn small ${ui.pick.kind==='voters'?'primary':''}" data-act="cancelpick">${ui.pick.kind==='voters'?'Done':'Cancel'}</button>`}</div>`);
   if(ui.msg) b.push(`<div class="toast"><span>${esc(ui.msg)}</span><button class="x" data-act="dismiss" aria-label="Dismiss">✕</button></div>`);
   document.getElementById('banners').innerHTML = b.join('');
   if(ui.msg && ui.msg!==lastMsg){ const m = lastMsg = ui.msg; clearTimeout(msgTimer); msgTimer = setTimeout(()=>{ if(ui.msg===m){ ui.msg = null; lastMsg = null; document.querySelector('.toast')?.remove(); } }, 7000); }
@@ -2250,11 +2329,18 @@ function render(){
   document.getElementById('qrBtn').hidden = !['reveal','game'].includes(S.stage);
   document.getElementById('undoBtn').disabled = !undo.length || (S.stage==='game' && JSON.parse(undo[undo.length-1].s).stage!=='game');
   document.getElementById('undoBtn').title = undo.length ? `Undo: ${undo[undo.length-1].what}` : 'Nothing to undo';
-  document.getElementById('newBtn').textContent = ui.confirmNew ? 'Click again to start over' : 'New game';
-  const vb = document.getElementById('voiceBtn'); vb.innerHTML = voice ? ic('sound')+'Voice on' : ic('mute')+'Voice off'; vb.classList.toggle('voiceon', voice);
-  document.getElementById('guideBtn').innerHTML = ic('book')+'Guide';
+  document.getElementById('gmenuBtn').innerHTML = ic('list')+'Game';
+  document.getElementById('gmenuBtn').classList.toggle('on', !!ui.gmenu);
+  const gmOpen = document.querySelector('#gmenu .menu');
+  document.getElementById('gmenu').innerHTML = ui.gmenu ? `<div class="menu${gmOpen?' still':''}" role="menu">
+    <button data-act="savefile">${ic('check')}Save game to a file</button><button data-act="openfile">${ic('arrow')}Open a saved game</button>
+    <button data-act="newgame" class="${ui.confirmNew?'confirm':''}">${ic('plus')}${ui.confirmNew?'Sure? Click again to start over':'New game'}</button><hr>
+    <button data-act="voice">${ic(voice?'sound':'mute')}Read announcements aloud: ${voice?'on':'off'}</button>
+    <button data-act="tab" data-k="guide">${ic('book')}Storyteller guide</button><hr>
+    <div class="cccnote muted" style="margin:2px 8px 4px"><img class="ccc" src="icons/ccc.png" alt="Community created content"><span>Fan-made. Character icons © The Pandemonium Institute.</span></div></div>` : '';
+  { const m = document.querySelector('#gmenu .menu'); if(m){ const l = m.parentElement.parentElement.getBoundingClientRect().right - m.offsetWidth; if(l<16) m.style.right = `${l-16}px`; } }
   document.getElementById('appscript').textContent = scriptName();
-  document.getElementById('coverBtn').innerHTML = ic('eyeoff')+'Hide grimoire';
+  document.getElementById('coverBtn').innerHTML = ic('eyeoff')+'Hide';
   document.getElementById('undoBtn').innerHTML = ic('undo')+'Undo';
   publishBoard();
 }
@@ -2338,6 +2424,7 @@ document.addEventListener('click', e=>{
   if(suppressClick){ suppressClick = false; return; }
   const el = e.target.closest('[data-act]');
   if(ui.menu){ const inMenu = e.target.closest('.menu'); ui.menu = null; if(!inMenu && !el) return render(); }
+  if(ui.gmenu && el?.dataset.act!=='gmenu' && !(el?.dataset.act==='newgame' && !ui.confirmNew)){ ui.gmenu = false; if(!el) return render(); }
   if(!el){ if(ui.pop && !e.target.closest('.pop')){ ui.pop = null; render(); } return; }
   if(el.classList.contains('recap') && e.target.closest('[data-stop]')) return;
   const act = el.dataset.act, id = el.dataset.id, p = id && P(id);
@@ -2349,9 +2436,9 @@ document.addEventListener('click', e=>{
   switch(act){
     case 'seat':
       if(ui.pick) return resolvePick(p);
-      if(ui.pick) return resolvePick(p);
       if(S.stage==='game'){ ui.pop = ui.pop===p.id ? null : p.id; ui.sel = p.id; return render(); }
       ui.sel = p.id; ui.tab='player'; return render();
+    case 'gmenu': ui.gmenu = !ui.gmenu; return render();
     case 'closepop': ui.pop = null; return render();
     case 'reload': location.reload(); return;
     case 'savefile': saveFile(); return;
@@ -2427,7 +2514,7 @@ document.addEventListener('click', e=>{
       return commit(()=>{ S.done[k] = true; ui.open = null; }, `${stepTitle(k)} marked done`);
     }
     case 'rule': { const r = (ui.rulings||[]).find(x=>x.id===el.dataset.id), o = r?.opts[+el.dataset.i]; if(!o) return;
-      return commit(()=>{ ui.rulings = ui.rulings.filter(x=>x!==r); o.fn(); checkWin(); }, o.label); }
+      return commit(()=>{ ui.rulings = ui.rulings.filter(x=>x!==r); runOpt(o); checkWin(); }, o.label); }
     case 'advance': if(ui.rulings?.length){ ui.msg = 'Make your call in the gold box at the top first.'; return render(); }
       if(S.phase.kind==='night'){
         if(currentStep(steps()) && !ui.confirmSkip){ ui.confirmSkip = true; ui.msg = 'Some characters have not had their turn yet. Press again to start the day anyway.'; return render(); }
@@ -2476,12 +2563,19 @@ document.addEventListener('click', e=>{
       return commit(()=>addRem(p,'custom',{label,expires}));
     }
     case 'clearwin': return commit(()=>{ S.winner=null; });
+    case 'votes': { const x = S.day?.noms?.[+el.dataset.i]; if(!x || S.day.executed) return; x.votes = Math.max(0, Math.min(S.players.length*2, (x.votes ?? (+el.dataset.d>0 ? needed()-1 : 1)) + +el.dataset.d)); save(); return render(); }
+    case 'markvoters': { const i = +el.dataset.i, x = S.day?.noms?.[i]; if(!x) return;
+      if(ui.pick?.kind==='voters' && ui.pick.i===i){ ui.pick = null; return render(); }
+      ui.pick = {kind:'voters', i, chosen:[...(x.voters||[])]}; return render(); }
+    case 'dv': { const v = el.dataset.v; S.day.dvManual = v==='auto' ? null : v==='yes'; save(); return render(); }
+    case 'goodwins': return commit(()=>setWinner('Good wins! The Demon is dead.'));
     case 'showcard': { const k = el.dataset.k, s0 = steps().find(x=>x.k===k); if(!s0) return; const c = stepDef(k).cards(stepActor(s0))[+el.dataset.i]; if(!c) return; ui.show = c.card; note(`${c.label.replace(/^Show /,'Showed ')}.`); return render(); }
     case 'youare': ui.show = cardYouAre(p); note(`Showed ${p.name} they are now the ${R[seen(p)].name}.`); return render();
     case 'charpick': { const k = el.dataset.k, a = P(el.dataset.actor), r = ui.form[k]?.role; if(!r) return;
       return commit(()=>{ addRem(a,'noability');
         if(impaired(a)){ log(`Philosopher ${a.name} chose the ${R[r].name}, but is drunk or poisoned: no ability gained.`); }
-        else { a.as = r; const holder = S.players.find(q=>q!==a && wake(q)===r); if(holder) addRem(holder,'drunk',{label:'Drunk (Philosopher)'}); log(`Philosopher ${a.name} gains the ${R[r].name} ability.${holder?` ${holder.name} has that character, so they are drunk from now on.`:''}`); }
+        else { a.as = r; const holder = S.players.find(q=>q!==a && wake(q)===r); if(holder) addRem(holder,'drunk',{label:'Drunk (Philosopher)'}); log(`Philosopher ${a.name} gains the ${R[r].name} ability.${holder?` ${holder.name} has that character, so they are drunk from now on.`:''}`);
+          if(r==='fortuneteller' && !S.players.some(q=>has(q,'redherring'))) ui.pick = {kind:'redherring'}; }
         S.picked[k] = R[r].name; }); }
     case 'alhset': { const f = ui.form.alhadikhia; if(!f) return; f.live[id] = el.dataset.v; return render(); }
     case 'alhres': { const f = ui.form.alhadikhia; if(!f || f.done) return; const ps = f.ids.map(P);
@@ -2492,7 +2586,7 @@ document.addEventListener('click', e=>{
         dying.forEach(q=>demonHit(a||q,q)); }); }
     case 'tinkerdie': return commit(()=>kill(p,'the Tinker died'));
     case 'moonkill': return commit(()=>{ p.rem = p.rem.filter(r=>r.type!=='moon'); if(!isEvil(p)) nightKill(p,'chosen by the Moonchild'); else log(`${p.name} is evil, so the Moonchild's choice does nothing.`); S.done.moonchild = true; });
-    case 'rosh': { const q = P(S.day.rosh); return commit(()=>{ S.day.rosh = null; if(el.dataset.v==='lose'){ log(`${q.name} lost roshambo.`); kill(q,'executed'); } else log(`${q.name} won roshambo and lives.`); }); }
+    case 'rosh': { const q = P(S.day.rosh); return commit(()=>{ S.day.rosh = null; if(el.dataset.v==='lose'){ log(`${q.name} lost roshambo.`); if(kill(q,'executed')) minstrel(q); } else log(`${q.name} won roshambo and lives.`); }); }
     case 'usedonce': return commit(()=>{ addRem(p,'noability'); log(`${p.name} used their ${R[wake(p)].name} ability.`); });
     case 'undo': {
       if(!undo.length) return;
@@ -2579,7 +2673,8 @@ document.addEventListener('keydown', e=>{
   if(phoneMode) return;
   const typing = e.target.closest('input,select,textarea');
   if(e.key==='Escape'){
-    if(ui.menu) ui.menu = null;
+    if(ui.gmenu) ui.gmenu = false;
+    else if(ui.menu) ui.menu = null;
     else if(ui.show) return document.querySelector('.show')?.click();
     else if(ui.preview) ui.preview = null;
     else if(ui.recap) ui.recap = null;
@@ -2612,7 +2707,7 @@ document.addEventListener('change', e=>{
     const lines = el.value.split('\n').map(s=>s.trim()).filter(Boolean);
     S.players.forEach((q,i)=>{ if(lines[i]) q.name = lines[i]; });
   });
-  if(k==='pname') return commit(()=>{ p.name = el.value.trim() || p.name; });
+  if(k==='pname'){ const v = el.value.trim(); if(v && S.players.some(q=>q!==p && q.name.trim().toLowerCase()===v.toLowerCase())){ ui.msg = `Someone is already called ${v}.`; return render(); } return commit(()=>{ p.name = v || p.name; }); }
   if(k==='role') return commit(()=>{
     p.role = el.value;
     p.shown = ['drunk','marionette'].includes(p.role) ? (pool('townsfolk').find(r=>!S.players.some(q=>q.role===r||q.shown===r)) || 'chef') : p.role==='lunatic' ? (S.players.find(isDemon)?.role || pool('demon')[0] || 'imp') : null; p.as = null;
@@ -2687,7 +2782,7 @@ const phoneBase = () => location.protocol==='file:' || /^(localhost|127\.0\.0\.1
 const xorb = b => b.map((x,i)=>x^'clocktower'.charCodeAt(i%10));
 function phoneLink(){
   const roles = scriptRoles();
-  const ps = S.players.map(p=>{ const r = seen(p), i = roles.indexOf(r); return p.name.replace(/[|^]/g,'') + '^' + (i>=0 && i<36 ? i.toString(36) : '*'+r) + (cardYouAre(p).tone==='evil'?'!':''); });
+  const ps = S.players.filter(p=>p.role).map(p=>{ const r = seen(p), i = roles.indexOf(r); return p.name.replace(/[|^]/g,'') + '^' + (i>=0 && i<36 ? i.toString(36) : '*'+r) + (cardYouAre(p).tone==='evil'?'!':''); });
   const b = xorb([...new TextEncoder().encode(['1', S.script==='teensy' ? 'teensy:'+roles.join(',') : S.script, ...ps].join('|'))]);
   return phoneBase() + '#p-' + btoa(String.fromCharCode(...b)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 }
@@ -2761,9 +2856,9 @@ function boardData(){
   return {game, phase: game ? S.phase.kind : 'setup', n: S.phase.n, script: scriptName(),
     players: S.players.map(p=>({name:p.name, alive:(p.alive && !p.fake) || (has(p,'diedtonight') && !p.fake), ghost:p.ghost})),
     needed: game ? Math.ceil(S.players.filter(p=>(p.alive && !p.fake) || has(p,'diedtonight')).length/2) : 0, toExecute: day ? dayNeed() : 0,
-    block: null,
+    block: day && blockOf() ? {name: blockOf().id ? P(blockOf().id).name : null, votes: blockOf().votes} : null,
     vote: null,
-    noms: [],
+    noms: day ? d.noms.map(x=>({from:P(x.nominator)?.name||'?', to:P(x.nominee)?.name||'?', votes:x.votes??'–'})) : [],
     timer: day ? {running:timer.running, end:timer.end, left:timer.left} : null,
     news: game ? (S.news||'') : '', winner: S.winner || null,
     record: S.revealed ? S.log.slice(0,800).reverse().map(l=>({at:l.at, t:l.t})) : null,
