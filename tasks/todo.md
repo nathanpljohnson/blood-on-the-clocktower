@@ -29,8 +29,8 @@ and 16 targeted rule scenarios. Harness lives outside the repo (session scratchp
 
 ## Review
 - Rule scenarios: 15 of 16 pass after fixes (were 3 of 16). Left open on purpose:
-  - Flowergirl: the app still can't know if the Demon voted (it records vote totals, not who raised a hand).
-  - Barber: the app forbids the Demon swapping themself. Rules wording ("not another Demon") suggests it's allowed; not changed without confirming.
+- Follow-up: Flowergirl gets optional "Who voted" per nomination plus a manual Yes/No; the night step uses whichever you recorded.
+- Follow-up: Barber lets the Demon swap themself (wiki: allowed; teams stay). If that hands a Demon to a good player, a "Your call" offers keeping teams (rules) or swapping them.
 - Game bot: 100 full games across all 11 scripts with misclicks, undos, reloads and mid-game character swaps: 0 errors after fixes.
 - Click fuzzer: 0 errors after fixes (was a render crash from the setup QR button).
-- Not fixed, design-level: the phone QR link carries every player's character, lightly scrambled. Anyone who decodes the URL sees the whole grimoire. Per-player links would fix it.
+- Accepted by the user as low risk: the phone QR link carries every player's character, lightly scrambled. Anyone who decodes the URL sees the whole grimoire. Per-player links would fix it.

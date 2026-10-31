@@ -165,6 +165,8 @@ textarea{width:100%;min-height:150px;resize:vertical}
 .tallyctl{display:flex;align-items:center;gap:6px;font-variant-numeric:tabular-nums}.tallyctl b{min-width:1.6em;text-align:center;font-size:1.1rem}
 .verdict{font-size:.78rem;color:var(--muted);text-align:right}.nom.on .verdict{color:#ffb3ab;font-weight:700}
 .blockline{font-size:.9rem;margin:0 0 8px}
+.nom .votersbtn{grid-column:1/-1;justify-self:start;padding:3px 9px;font-size:.8rem}
+.fgrow{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;justify-content:space-between;border:1px solid var(--line);border-radius:8px;padding:6px 10px;margin:4px 0 8px;font-size:.9rem}
 .log{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;font-size:.88rem;max-height:520px;overflow:auto}
 .log b{color:var(--brass);font-weight:500;margin-right:6px}
 .script{display:flex;flex-direction:column;gap:6px}
@@ -802,6 +804,7 @@ function runOpt(o){
     case 'kill': if(P0?.alive) kill(P0, a[1], a[2]); return;
     case 'nightKill': if(P0) nightKill(P0, a[1]); return;
     case 'spareDie': { const [aid, tid, cause] = a, tt = P(tid), aa = P(aid); if(!tt?.alive) return; if(cause) return kill(tt, cause+', your call'); if(aa?.role==='imp' && tt===aa) return kill(tt,'star-pass'); return demonKill(aa, tt, true); }
+    case 'align': { const [id1, a1, id2, a2] = a; P(id1).align = a1; P(id2).align = a2; log(`${P(id1).name} is now ${a1} and ${P(id2).name} is now ${a2}.`); return; }
     case 'virginExec': { if(!P0?.alive || S.day?.executed) return; log(`${P0.name} nominated the Virgin and is executed right away.`); execute(P0); ui.show = {eyebrow:'The Virgin was nominated', big:`${P0.name} is executed`, tone:'evil'}; return; }
   }
 }
@@ -1024,7 +1027,7 @@ function toNight(){
   if(levActive() && S.phase.n>=5) setWinner('Evil wins! Day 5 is over and the Leviathan lives.');
   if(d.noms?.some(x=>x.votes!=null)) log(`Votes today: ${d.noms.map(x=>`${P(x.nominee)?.name} ${x.votes??'?'}`).join(', ')}.`);
   S.executedLast = d.executed;
-  S.lastDay = {died:!!d.anyDied, outsiderDied:!!d.outsiderDied, demonVoted:!!d.demonVoted, minionNominated:!!d.minionNominated};
+  S.lastDay = {died:!!d.anyDied, outsiderDied:!!d.outsiderDied, demonVoted:demonVoted(d), minionNominated:!!d.minionNominated};
   S.phase = {kind:'night',n:S.phase.n+1}; S.done={}; S.picked={}; S.pickedIds={}; S.night={changed:[]}; S.news=''; ui.form={}; ui.open=null; ui.vote=null; ui.savant=null; ui.stmts=null;
   if(!S.winner) say('Night falls. Everyone, close your eyes.');
   timer.running=false; timer.left=0;
@@ -1193,6 +1196,7 @@ function infoSuggest(k, a){
       if(k==='seamstress' && fx.length) add(T, `${not(ans)} (if ${fx.map(regLabel).join(' and ')})`, {ans:not(ans)});
       add(F, not(ans), {ans:not(ans)});
     }
+    if(k==='flowergirl' && ans && S.lastDay?.demonVoted!=null){ add(T, ans, {ans}); add(F, not(ans), {ans:not(ans)}); note = 'Based on what you recorded today.'; }
     if(k==='towncrier' && ans){ add(T, ans, {ans}); add(F, not(ans), {ans:not(ans)}); note = 'Based on the nominations you recorded today.'; }
   }
   if(st.info==='character' && (k!=='ravenkeeper' || S.pickedIds?.ravenkeeper)){
@@ -1248,6 +1252,7 @@ function formFor(k,a){
   if(ui.form[k]) return ui.form[k];
   const f = {};
   if(k==='towncrier') f.ans = S.lastDay?.minionNominated ? 'Yes' : 'No';
+  if(k==='flowergirl' && S.lastDay?.demonVoted!=null) f.ans = S.lastDay.demonVoted ? 'Yes' : 'No';
   return ui.form[k] = f;
 }
 
@@ -1382,6 +1387,7 @@ const PICK_TEXT = {
   nominee:'Who are they nominating? Click them.'
 };
 function pickText(pk){
+  if(pk.kind==='voters'){ const x = S.day?.noms?.[pk.i]; return `Click everyone who raised a hand for ${P(x?.nominee)?.name||'?'}: ${pk.chosen.length} so far. Click again to take one off.`; }
   if(PICK_TEXT[pk.kind]) return PICK_TEXT[pk.kind];
   const st = stepDef(pk.kind), n = st?.n||1, got = pk.chosen?.length||0, a = P(pk.actor);
   const who = pk.kind==='legion' ? 'Click the player who dies.' : `the ${a ? (pk.kind==='barber' ? 'Demon' : R[abilityOf(a)]?.name || 'player') : 'player'} points at.`;
@@ -1391,6 +1397,9 @@ function pickText(pk){
 function resolvePick(t){
   const pk = ui.pick, a = P(pk.actor), st = STEP[pk.kind] ? stepDef(pk.kind) : null;
   const err = m => { ui.msg = m; render(); };
+  if(pk.kind==='voters'){ const x = S.day?.noms?.[pk.i]; if(!x) { ui.pick = null; return render(); }
+    const ch = pk.chosen.includes(t.id) ? pk.chosen.filter(id=>id!==t.id) : [...pk.chosen, t.id];
+    ui.pick = {...pk, chosen:ch}; x.voters = ch; x.votes = ch.length; save(); return render(); }
   const rule = st?.rule || {};
   if(rule.notSelf && t===a) return err('They have to choose someone other than themself.');
   if(rule.alive && (!t.alive || t.fake)) return err(`${t.name} is dead. They must choose a living player.`);
@@ -1401,7 +1410,7 @@ function resolvePick(t){
   if(['klutz','moonchild','psychopath'].includes(pk.kind) && !t.alive) return err('Click a living player.');
   if(pk.among && !pk.among.includes(t.id)) return err('Click one of the players they chose.');
   if(pk.kind==='exorcist' && has(t,'exorcised')) return err("The Exorcist can't choose the same player as last night.");
-  if(pk.kind==='barber' && isDemon(t)) return err("The Barber swap can't include a Demon.");
+  if(pk.kind==='barber' && isDemon(t) && t!==a) return err("The Demon can swap themself, but not another Demon.");
   if(pk.kind==='execute' && !(t.alive && !t.fake) && pk.sure!==t.id){ ui.pick = {...pk, sure:t.id}; return err(`${t.name} is already dead. Click them again to execute them anyway (it still counts as today's execution).`); }
   if(pk.kind==='execute') return commit(()=>{ ui.pick = null; execute(t); ui.show = {eyebrow:'The town has spoken', big:`${t.name} is executed`, tone:'evil'}; });
   if(pk.kind==='execfail') return commit(()=>{ ui.pick = null; S.day.executed = t.id; addRem(t,'executed'); S.news = `${t.name} was executed, but nothing happened.`; log(`${t.name} is executed, but only evil players voted, so the execution fails (Legion). Nobody dies.`); });
@@ -1579,7 +1588,12 @@ function act(kind, a, ts, pk){
       endAbility(t); endAbility(u);
       [t.role,u.role] = [u.role,t.role]; [t.shown,u.shown] = [u.shown,t.shown]; t.as = null; u.as = null; t.align = ta; u.align = ua;
       changed(t,'barber'); changed(u,'barber'); S.haircut = null;
-      log(`Barber: ${t.name} is now the ${R[t.role].name} and ${u.name} is now the ${R[u.role].name}. Their teams stay the same.`); break; }
+      log(`Barber: ${t.name} is now the ${R[t.role].name} and ${u.name} is now the ${R[u.role].name}. Their teams stay the same.`);
+      { const gd = [t,u].find(q=>isDemon(q) && !isEvil(q)), ev = gd && [t,u].find(q=>q!==gd);
+        if(gd) propose(`${gd.name} now holds the ${R[gd.role].name} but is still good, because the Barber swaps characters, not teams. ${ev.name} is now an evil ${R[ev.role].name}.`, [
+          {label:'Keep the rules: teams stay', run:['log', `You kept the teams: ${gd.name} is a good ${R[gd.role].name}.`]},
+          {label:`Swap teams too: ${gd.name} evil, ${ev.name} good`, run:['align', gd.id, 'evil', ev.id, 'good']}]); }
+      break; }
     case 'sweetheart': (S.flags ||= {}).sweet = true; addRem(t,'drunk',{label:'Drunk (Sweetheart)'}); log(`${t.name} is drunk for the rest of the game (Sweetheart).`); break;
     case 'professor': addRem(a,'noability');
       if(sob && team(t)==='townsfolk'){ t.alive = true; t.ghost = true; t.rem = t.rem.filter(r=>r.type!=='diedtonight'); log(`Professor ${a.name} brings ${t.name} back to life.`); }
@@ -1643,6 +1657,13 @@ function centerHTML(){
     ${ph.kind==='day'&&timerOn()?`<div class="clock ${timerLeft()<30000?'low':''}" data-timer>${fmt(timerLeft())}</div>`:''}</div>`;
 }
 const dayNeed = needed;
+const flowergirlIn = () => S.players.some(p=>wake(p)==='flowergirl' || hasAbility(p,'flowergirl'));
+// Flowergirl answer: your own Yes/No wins; otherwise worked out from voters you marked; otherwise unknown (null).
+function demonVoted(d = S.day){
+  if(!d) return null; if(d.dvManual!=null) return d.dvManual;
+  const marked = (d.noms||[]).filter(x=>x.voters); if(!marked.length) return null;
+  return marked.some(x=>x.voters.some(id=>P(id) && isDemon(P(id))));
+}
 // Who is about to die: the highest vote total that reached the threshold. A tie at the top means nobody.
 function blockOf(){
   const noms = (S.day?.noms||[]).filter(x=>x.votes!=null && x.votes>=needed());
@@ -1914,7 +1935,7 @@ function stepBody(s){
       const ans = liveAns(s.k);
       if(s.k==='fortuneteller'){ const rh = S.players.filter(p=>has(p,'redherring')); parts.push(`<div class="truth">${ans?`True answer: <b>${ans}</b>.`:'Yes if either is'} the Demon (${names(S.players.filter(isDemon))}) or the red herring (${rh.length?names(rh):'not set'}). A Recluse may also count.</div>`); }
       else if(s.k==='towncrier') parts.push(`<div class="truth">Based on the nominations you recorded: <b>${ans}</b>. If you didn't record them all, use what you saw.</div>`);
-      else if(s.k==='flowergirl') parts.push(`<div class="truth">Did the Demon (${names(S.players.filter(isDemon))}) vote today? You saw the votes.</div>`);
+      else if(s.k==='flowergirl') parts.push(`<div class="truth">${S.lastDay?.demonVoted!=null?`From what you recorded today: <b>${ans}</b>.`:`Did the Demon (${names(S.players.filter(isDemon))}) vote today? Nothing was recorded, so use what you saw.`}</div>`);
       else parts.push(`<div class="truth">True answer: <b>${ans||'?'}</b>.</div>`);
       parts.push(suggHTML(s.k, a));
       parts.push(`<div class="row"><button class="btn ${ans==='Yes'?'primary':'good'}" data-act="showyn" data-k="${s.k}" data-v="Yes">${ic('eye')}Show YES</button><button class="btn ${ans==='No'?'primary':'good'}" data-act="showyn" data-k="${s.k}" data-v="No">${ic('eye')}Show NO</button>${s.k==='fortuneteller'?'<button class="btn small" data-act="pick" data-kind="redherring">Move red herring</button>':''}</div>`);
@@ -1998,13 +2019,16 @@ function dayHTML(){
   if(!d.executed) parts.push(`<h3 style="margin-top:4px">Talking time</h3>${timerHTML()}<div style="height:10px"></div>`);
   if(dead.length) parts.push(`<h3>Ghost votes</h3><p class="muted" style="margin:0 0 6px">Click a dead player when they use their one vote.</p><div class="row">${dead.map(p=>`<button class="btn small ${p.ghost?'primary':''}" data-act="ghost" data-id="${p.id}" title="${p.ghost?'Click when they use it':'Click to give it back'}">${ic('hand')}${esc(p.name)}: ${p.ghost?'has vote':'used'}</button>`).join('')}</div>`);
   if(!S.winner){
-    const blk = blockOf(), need = needed();
+    const blk = blockOf(), need = needed(), fg = flowergirlIn();
     const row = (x,i) => { const v = x.votes, pass = v!=null && v>=need, on = blk?.id===x.nominee && pass;
       return `<li class="nom ${on?'on':''}"><span class="who">${esc(P(x.nominator)?.name)} <span class="muted">→</span> <b>${esc(P(x.nominee)?.name)}</b></span>
         <span class="tallyctl">${d.executed?`<b>${v??'–'}</b>`:`<button class="x" data-act="votes" data-i="${i}" data-d="-1" aria-label="One vote fewer">${ic('minus')}</button><b>${v??'–'}</b><button class="x" data-act="votes" data-i="${i}" data-d="1" aria-label="One more vote">${ic('plus')}</button>`}</span>
-        <span class="verdict">${v==null?'<span class="muted">count the hands</span>':on?'on the block':pass?(blk?.id===null&&v===blk.votes?'tied':'beaten'):'too few'}</span></li>`; };
+        <span class="verdict">${v==null?'<span class="muted">count the hands</span>':on?'on the block':pass?(blk?.id===null&&v===blk.votes?'tied':'beaten'):'too few'}</span>
+        ${fg && !d.executed?`<button class="btn small votersbtn ${ui.pick?.kind==='voters'&&ui.pick.i===i?'primary':''}" data-act="markvoters" data-i="${i}">${ic('hand')}${x.voters?`${x.voters.length} marked`:'Who voted'}</button>`:''}</li>`; };
     const blkLine = !blk ? `Nobody is on the block. ${need} votes puts someone there.` : blk.id ? `<b>${esc(P(blk.id).name)}</b> is on the block with ${blk.votes}. ${blk.votes+1} replaces them; ${blk.votes} ties and frees them.` : `Tied at ${blk.votes}: nobody is on the block. ${blk.votes+1} puts someone there.`;
     parts.push(`<h3>Nominations</h3>${d.noms.length?`<ul class="noms">${d.noms.map(row).join('')}</ul>`:''}<p class="blockline">${blkLine}</p>${d.executed?'':`<button class="btn small" data-act="pick" data-kind="nominator">${ic('hand')}New nomination</button>`}`);
+    if(fg){ const dv = demonVoted(), how = d.dvManual!=null ? 'your answer' : dv!=null ? 'from the voters you marked' : 'not recorded';
+      parts.push(`<div class="fgrow"><span>Flowergirl: did the Demon vote today? <b>${dv==null?'–':dv?'Yes':'No'}</b> <span class="muted">(${how})</span></span><span class="row"><button class="btn small ${d.dvManual===true?'primary':''}" data-act="dv" data-v="yes">Yes</button><button class="btn small ${d.dvManual===false?'primary':''}" data-act="dv" data-v="no">No</button>${d.dvManual!=null?'<button class="btn small" data-act="dv" data-v="auto">Clear</button>':''}</span></div>`); }
   }
   const slayer = S.players.find(p=>p.alive && wake(p)==='slayer' && !p.rem.some(r=>r.type==='noability'));
   if(slayer) parts.push(`<h3>Slayer</h3><button class="btn small" data-act="pick" data-kind="slayer" data-actor="${slayer.id}">${ic('target')}${esc(slayer.name)} shoots someone</button>`);
@@ -2225,7 +2249,7 @@ function cardTown(){
 }
 function dockHTML(){
   if(S.stage!=='game' || ui.show) return '';
-  if(ui.pick) return `<button class="btn" data-act="cancelpick">Cancel</button>`;
+  if(ui.pick) return `<button class="btn ${ui.pick.kind==='voters'?'primary':''}" data-act="cancelpick">${ui.pick.kind==='voters'?'Done marking votes':'Cancel'}</button>`;
   if(S.phase.kind==='night'){
     const cur = currentStep(steps());
     if(!cur) return `<button class="btn primary" data-act="advance">Everyone wakes: start day ${S.phase.n}</button>`;
@@ -2282,7 +2306,7 @@ function render(){
   if(S.stage==='game' && !S.winner && !alive().some(isDemon) && ui.pick?.kind!=='starpass' && !S.flags?.twins && !(ui.rulings||[]).length)
     b.push(`<div class="banner pick"><span>Nobody alive is the Demon. If that's a mistake, fix a character on the Player tab or press Undo.</span><span class="row"><button class="btn small" data-act="goodwins">Good wins</button><button class="btn small" data-act="undo">Undo</button></span></div>`);
   (ui.rulings||[]).forEach(r=>b.push(`<div class="banner pick ruling"><span>${ic('book')}<b>Your call:</b> ${esc(r.text)}</span><span class="row">${r.opts.map((o,i)=>`<button class="btn small ${i===0?'primary':''}" data-act="rule" data-id="${r.id}" data-i="${i}" ${i===0?'title="What the rules say"':''}>${esc(o.label)}</button>`).join('')}</span></div>`));
-  if(ui.pick) b.push(`<div class="banner pick"><span>${ic('target')}${esc(pickText(ui.pick))}</span>${['starpass','mayor'].includes(ui.pick.kind)?'':'<button class="btn small" data-act="cancelpick">Cancel</button>'}</div>`);
+  if(ui.pick) b.push(`<div class="banner pick"><span>${ic('target')}${esc(pickText(ui.pick))}</span>${['starpass','mayor'].includes(ui.pick.kind)?'':`<button class="btn small ${ui.pick.kind==='voters'?'primary':''}" data-act="cancelpick">${ui.pick.kind==='voters'?'Done':'Cancel'}</button>`}</div>`);
   if(ui.msg) b.push(`<div class="toast"><span>${esc(ui.msg)}</span><button class="x" data-act="dismiss" aria-label="Dismiss">✕</button></div>`);
   document.getElementById('banners').innerHTML = b.join('');
   if(ui.msg && ui.msg!==lastMsg){ const m = lastMsg = ui.msg; clearTimeout(msgTimer); msgTimer = setTimeout(()=>{ if(ui.msg===m){ ui.msg = null; lastMsg = null; document.querySelector('.toast')?.remove(); } }, 7000); }
@@ -2536,6 +2560,10 @@ document.addEventListener('click', e=>{
     }
     case 'clearwin': return commit(()=>{ S.winner=null; });
     case 'votes': { const x = S.day?.noms?.[+el.dataset.i]; if(!x || S.day.executed) return; x.votes = Math.max(0, Math.min(S.players.length*2, (x.votes ?? (+el.dataset.d>0 ? needed()-1 : 1)) + +el.dataset.d)); save(); return render(); }
+    case 'markvoters': { const i = +el.dataset.i, x = S.day?.noms?.[i]; if(!x) return;
+      if(ui.pick?.kind==='voters' && ui.pick.i===i){ ui.pick = null; return render(); }
+      ui.pick = {kind:'voters', i, chosen:[...(x.voters||[])]}; return render(); }
+    case 'dv': { const v = el.dataset.v; S.day.dvManual = v==='auto' ? null : v==='yes'; save(); return render(); }
     case 'goodwins': return commit(()=>setWinner('Good wins! The Demon is dead.'));
     case 'showcard': { const k = el.dataset.k, s0 = steps().find(x=>x.k===k); if(!s0) return; const c = stepDef(k).cards(stepActor(s0))[+el.dataset.i]; if(!c) return; ui.show = c.card; note(`${c.label.replace(/^Show /,'Showed ')}.`); return render(); }
     case 'youare': ui.show = cardYouAre(p); note(`Showed ${p.name} they are now the ${R[seen(p)].name}.`); return render();
