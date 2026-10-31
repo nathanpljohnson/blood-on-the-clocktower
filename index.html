@@ -2417,7 +2417,7 @@ function qrSVG(text){
 }
 
 /* ---------- phone link: each player picks their name and sees their character ---------- */
-const PAGES_URL = 'https://nathanpljohnson.github.io/clocktower-grimoire/';
+const PAGES_URL = 'https://nathanpljohnson.github.io/blood-on-the-clocktower/';
 const phoneBase = () => location.protocol==='file:' || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname) ? location.href.split('#')[0] : PAGES_URL;
 const xorb = b => b.map((x,i)=>x^'clocktower'.charCodeAt(i%10));
 function phoneLink(){
