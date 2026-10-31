@@ -167,6 +167,13 @@ textarea{width:100%;min-height:150px;resize:vertical}
 .nom .who{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tallyctl{display:flex;align-items:center;gap:6px;font-variant-numeric:tabular-nums}.tallyctl b{min-width:1.6em;text-align:center;font-size:1.1rem}
 .verdict{font-size:.78rem;color:var(--muted);text-align:right}.nom.on .verdict{color:#ffb3ab;font-weight:700}
+.roster{display:flex;flex-wrap:wrap;gap:6px}
+.rchip{display:inline-flex;align-items:stretch;border:1px solid var(--line);border-radius:999px;background:var(--bg);overflow:hidden}
+.rchip>button{background:none;border:0;padding:7px 13px;font-weight:600;display:inline-flex;align-items:center;gap:6px}
+.rchip.on{border-color:var(--brass);background:color-mix(in srgb,var(--brass) 16%,var(--bg))}
+.rchip i{font-style:normal;font-size:.72rem;min-width:1.5em;height:1.5em;border-radius:50%;background:var(--brass);color:#1b1608;display:inline-flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums}
+.rchip .rdel{padding:0 9px;border-left:1px solid var(--line);color:var(--muted)}
+.seated{flex:1}.seated b{font-size:1.1rem}
 .blockline{font-size:.9rem;margin:0 0 8px}
 .nom .votersbtn{grid-column:1/-1;justify-self:start;padding:3px 9px;font-size:.8rem}
 .fgrow{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;justify-content:space-between;border:1px solid var(--line);border-radius:8px;padding:6px 10px;margin:4px 0 8px;font-size:.9rem}
@@ -587,6 +594,14 @@ const shuffle = a => { a=[...a]; for(let i=a.length-1;i>0;i--){const j=Math.floo
 const tbTeam = t => SCRIPTS.tb.roles.filter(k=>R[k].team===t);
 const TEENSY = ['investigator','chef','empath','fortuneteller','monk','slayer','drunk','saint','poisoner','scarletwoman','imp'];
 let teensyList = (()=>{ try{ const v = JSON.parse(localStorage.getItem('tb-teensy-list')); if(Array.isArray(v) && v.length) return v; }catch(e){} return [...TEENSY]; })();
+// Your regular players. Kept in this browser; DEFAULT_ROSTER ships with the app so every device starts with them.
+const DEFAULT_ROSTER = ['Joseph','Anya','Ava','Luke Constantineau','Luke McLeod','Nathan','Marnie','Bo','Jaylen','Zach','Connor','Anna Louise','Makena','Maria'];
+const ROSTER_V = 1; // bump when DEFAULT_ROSTER changes so new defaults reach saved lists once
+let roster = (()=>{ try{ const v = JSON.parse(localStorage.getItem('tb-roster')), ver = +localStorage.getItem('tb-roster-v')||0;
+  if(Array.isArray(v)){ if(ver>=ROSTER_V) return v; const m = [...v]; DEFAULT_ROSTER.forEach(n=>{ if(!m.some(r=>r.toLowerCase()===n.toLowerCase())) m.push(n); }); return m; } }catch(e){} return [...DEFAULT_ROSTER]; })();
+const saveRoster = () => { try{ localStorage.setItem('tb-roster', JSON.stringify(roster)); localStorage.setItem('tb-roster-v', String(ROSTER_V)); }catch(e){} };
+const sameName = (a,b) => a.trim().toLowerCase()===b.trim().toLowerCase();
+const blankPlayer = name => ({id:uid(),name,role:null,shown:null,alive:true,ghost:true,rem:[],revealed:false});
 const saveTeensy = () => { try{ localStorage.setItem('tb-teensy-list', JSON.stringify(teensyList)); }catch(e){} };
 const scriptRoles = () => S.script==='teensy' ? teensyList : (SCRIPTS[S.script]||SCRIPTS.tb).roles;
 const scriptName = () => (SCRIPTS[S.script]||SCRIPTS.tb).name;
@@ -1682,8 +1697,11 @@ function setupHTML(){
   const n = S.players.length;
   if(S.stage==='players' && ui.editTeensy) return head + teensyEditorHTML();
   if(S.stage==='players'){
-    const [t,o,m,d] = DIST[n];
-    const counts = playerCounts();
+    const [t,o,m,d] = DIST[n] || [0,0,0,0];
+    const counts = playerCounts(), lo = Math.min(...counts), hi = Math.max(...counts), okN = counts.includes(n);
+    const extra = S.players.filter(p=>!roster.some(r=>sameName(r,p.name)));
+    const seatNo = nm => S.players.findIndex(p=>sameName(p.name,nm));
+    const chip = nm => { const i = seatNo(nm); return `<span class="rchip ${i>=0?'on':''}"><button data-act="rseat" data-v="${esc(nm)}" aria-pressed="${i>=0}">${i>=0?`<i>${i+1}</i>`:''}${esc(nm)}</button>${ui.editRoster?`<button class="rdel" data-act="rdel" data-v="${esc(nm)}" aria-label="Remove ${esc(nm)} from your list">${ic('x')}</button>`:''}</span>`; };
     return head + `${S.log.length||S.stage!=='players'?'':`<div class="tip"><span>First time telling the story?</span><button class="btn small primary" data-act="tab" data-k="guide">Read the 2-minute guide</button></div>`}
       <h2>Which game?</h2>
       <div class="mode scripts">${Object.entries(SCRIPTS).map(([id,sc])=>{ const rs = id==='teensy' ? teensyList : sc.roles;
@@ -1693,11 +1711,13 @@ function setupHTML(){
       <div class="row" style="margin-bottom:10px"><button class="btn small" data-act="tab" data-k="script">${ic('book')}Share the ${esc(scriptName())} character sheet</button></div>
       ${fabled().map(k=>`<p class="muted"><b>${R[k].name}:</b> ${esc(R[k].ability)}</p>`).join('')}
       <h2>Who is playing?</h2>
-      <label class="f">Number of players<select id="count" data-change="count">${counts.map(v=>`<option ${v===n?'selected':''}>${v}</option>`).join('')}</select></label>
-      <p class="muted" style="margin-top:8px">${t} Townsfolk · ${o} Outsider${o===1?'':'s'} · ${m} Minion${m>1?'s':''} · ${d} Demon${n<=6?(evilInfo()?'. The Toymaker gives evil their normal info even with 5 or 6 players.':'. With 6 or fewer players, Minions and the Demon do not learn each other.'):''}</p>
-      <p class="muted" style="margin:0 0 6px">You can also drag seats on the table to change the order.</p><label class="f">Names, clockwise around the table<textarea id="names" data-change="names">${esc(S.players.map(p=>p.name).join('\n'))}</textarea></label>
+      <p class="muted" style="margin:0 0 8px">Tap names in the order they sit, clockwise. Drag seats on the table to fix the order.</p>
+      <div class="roster">${[...roster, ...extra.map(p=>p.name)].map(chip).join('')}</div>
+      <div class="row" style="margin-top:8px"><input type="text" id="rnew" placeholder="New name" aria-label="New player's name" autocomplete="off" style="flex:1;min-width:0"><button class="btn small primary" data-act="radd">${ic('plus')}Add</button></div>
+      <div class="row" style="margin-top:8px"><span class="seated"><b>${n}</b> seated</span>${n?'<button class="btn small" data-act="rclear">Clear seats</button>':''}<button class="btn small ${ui.editRoster?'primary':''}" data-act="redit">${ui.editRoster?'Done editing':'Edit list'}</button></div>
+      ${okN?`<p class="muted" style="margin-top:8px">${t} Townsfolk · ${o} Outsider${o===1?'':'s'} · ${m} Minion${m>1?'s':''} · ${d} Demon${n<=6?(evilInfo()?'. The Toymaker gives evil their normal info even with 5 or 6 players.':'. With 6 or fewer players, Minions and the Demon do not learn each other.'):''}</p>`:`<p class="warn">${esc(scriptName())} needs ${lo} to ${hi} players. ${n<lo?`Seat ${lo-n} more.`:`Take ${n-hi} off.`}</p>`}
       ${dupNames().length?`<p class="warn">Two players are called ${esc(dupNames().join(', '))}. Give everyone a different name so phones and the record can tell them apart.</p>`:''}
-      <div style="margin-top:12px"><button class="btn primary big" data-act="stage" data-to="chars" ${dupNames().length?'disabled':''}>Next: choose characters</button></div>`;
+      <div style="margin-top:12px"><button class="btn primary big" data-act="stage" data-to="chars" ${dupNames().length||!okN?'disabled':''}>Next: choose characters</button></div>`;
   }
   if(S.stage==='chars'){
     const tg = targets(), total = bagTotal(), ok = bagOK();
@@ -2569,6 +2589,15 @@ document.addEventListener('click', e=>{
       if(ui.pick?.kind==='voters' && ui.pick.i===i){ ui.pick = null; return render(); }
       ui.pick = {kind:'voters', i, chosen:[...(x.voters||[])]}; return render(); }
     case 'dv': { const v = el.dataset.v; S.day.dvManual = v==='auto' ? null : v==='yes'; save(); return render(); }
+    case 'rseat': { const nm = el.dataset.v, i = S.players.findIndex(p=>sameName(p.name,nm));
+      return commit(()=>{ if(i>=0) S.players.splice(i,1); else S.players.push(blankPlayer(nm)); S.chosen = []; }, i>=0 ? `Unseated ${nm}` : `Seated ${nm}`); }
+    case 'radd': { const box = document.getElementById('rnew'), nm = (box?.value||'').trim().replace(/\s+/g,' '); if(!nm) return box?.focus();
+      if(!roster.some(r=>sameName(r,nm))){ roster.push(nm); saveRoster(); }
+      if(S.players.some(p=>sameName(p.name,nm))){ ui.msg = `${nm} is already seated.`; return render(); }
+      commit(()=>{ S.players.push(blankPlayer(nm)); S.chosen = []; }, `Added ${nm}`); document.getElementById('rnew')?.focus(); return; }
+    case 'rdel': { const nm = el.dataset.v; roster = roster.filter(r=>!sameName(r,nm)); saveRoster(); return render(); }
+    case 'redit': ui.editRoster = !ui.editRoster; return render();
+    case 'rclear': return commit(()=>{ S.players = []; S.chosen = []; }, 'Cleared seats');
     case 'goodwins': return commit(()=>setWinner('Good wins! The Demon is dead.'));
     case 'showcard': { const k = el.dataset.k, s0 = steps().find(x=>x.k===k); if(!s0) return; const c = stepDef(k).cards(stepActor(s0))[+el.dataset.i]; if(!c) return; ui.show = c.card; note(`${c.label.replace(/^Show /,'Showed ')}.`); return render(); }
     case 'youare': ui.show = cardYouAre(p); note(`Showed ${p.name} they are now the ${R[seen(p)].name}.`); return render();
@@ -2685,7 +2714,7 @@ document.addEventListener('keydown', e=>{
     else return;
     return render();
   }
-  if(typing) return;
+  if(typing){ if(e.key==='Enter' && e.target.id==='rnew'){ e.preventDefault(); document.querySelector('[data-act=radd]')?.click(); } return; }
   if((e.key==='Enter' || e.key===' ') && e.target.closest('.seat')){ e.preventDefault(); return e.target.closest('.seat').click(); }
   if(e.target.closest('button')) return;
   if(e.key==='Enter'){
@@ -2923,7 +2952,7 @@ function startTown(){
   if(!owner || townMode) startTown(); else publishBoard();
 })();
 
-S = load() || fresh(8);
+S = load() || fresh(roster.length ? 0 : 8);
 if(!S.script) S.script = S.teensy ? 'teensy' : 'tb';
 S.flags ||= {}; S.night ||= {changed:[]}; S.lastDay ||= {};
 loadUi();
