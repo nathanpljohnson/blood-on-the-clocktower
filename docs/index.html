@@ -519,9 +519,14 @@ select,input[type=text],input[type=number],textarea,select:focus,input:focus,tex
 .banner.win{background:rgba(150,30,25,.3)}
 .truth{background:none}.warn{background:none}
 .show .slist span{background:rgba(0,0,0,.4);box-shadow:none}
-:root.night .btn,:root.night .btn:hover:not(:disabled){background:#121826;border-color:#2a3446}
+/* night: only plain buttons turn blue; gold, red and blue buttons keep their colour, hovered or not */
+:root.night .btn:not(.primary):not(.danger):not(.evil):not(.good){background:#121826;border-color:#2a3446}
+:root.night .btn:not(.primary):not(.danger):not(.evil):not(.good):hover:not(:disabled){background:#1a2233}
 :root.night .btn.primary{background:#d4ae68;border-color:#d4ae68}
 :root.night .btn.danger,:root.night .btn.evil{background:#4a120e;border-color:#9a2c24}
+:root.night .btn.good{background:#132a46;border-color:#3e6fb0}
+:root.night .btn.primary:hover:not(:disabled){background:#e0bc78}
+:root.night .btn.danger:hover:not(:disabled),:root.night .btn.evil:hover:not(:disabled){background:#5a1712}
 :root.night .card{background:#0d121b}
 :root.night .focus{background:#111724}
 :root.night .step,:root.night .nom,:root.night .counts div,:root.night .mode button,:root.night .cbtn{background:#0b0f17}
