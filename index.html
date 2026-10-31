@@ -265,7 +265,8 @@ textarea{width:100%;min-height:150px;resize:vertical}
 .mode .scard > button:first-child{flex:1;border-radius:10px 10px 0 0}
 .mode button.sprev{border-top:0;border-radius:0 0 10px 10px;padding:6px 10px;font-size:.8rem;color:var(--muted);display:flex;align-items:center;gap:6px}
 .preview{position:fixed;inset:0;z-index:50;background:#000b;overflow-y:auto;padding:calc(16px + env(safe-area-inset-top,0px)) 16px calc(16px + env(safe-area-inset-bottom,0px))}
-.preview .pinner{max-width:760px;margin:0 auto;background:var(--felt);border:1px solid var(--line);border-radius:14px;padding:16px}
+.preview .sheetimg{display:block;width:100%;height:auto;border-radius:8px;margin-top:12px}
+.preview .pinner{max-width:1100px;margin:0 auto;background:var(--felt);border:1px solid var(--line);border-radius:14px;padding:16px}
 .pbtn{width:100%;justify-content:center;padding:16px 18px;font-size:1.15rem}
 </style>
 
@@ -1485,13 +1486,20 @@ function charGroupsHTML(roles, fab){
   const group = (l,ks) => ks.length ? `<h3>${l}</h3><div class="chars">${ks.map(k=>`<div class="cbtn cview ${R[k].team||''}"><span class="mini">${tokenSVG(k)}</span><span class="ctext"><b>${esc(R[k].name)}</b><small>${esc(R[k].ability)}</small></span></div>`).join('')}</div>` : '';
   return SHEET_TEAMS.map(([t,l])=>group(l, roles.filter(k=>R[k]?.team===t))).join('') + group('Fabled', fab.filter(k=>R[k]));
 }
+const sheetCache = {};
+function sheetImgHTML(id){
+  const key = id==='teensy' ? 'teensy:'+teensyList.join() : id;
+  if(sheetCache[key]) return `<img class="sheetimg" src="${sheetCache[key]}" alt="${esc(SCRIPTS[id].name)} character sheet">`;
+  if(sheetCache[key]!==null){ sheetCache[key] = null; sheetCanvas(id).then(c=>{ sheetCache[key] = c.toDataURL('image/png'); if(ui.preview===id) render(); }); }
+  return `<p class="muted" style="padding:40px 0;text-align:center">Drawing the character sheet…</p>`;
+}
 function previewHTML(){
   const id = ui.preview, sc = SCRIPTS[id]; if(!sc) return '';
   const rs = id==='teensy' ? teensyList : sc.roles;
   return `<div class="preview" role="dialog" aria-label="${esc(sc.name)} characters"><div class="pinner">
     <div class="row" style="justify-content:space-between;align-items:flex-start;flex-wrap:nowrap"><div><h2 style="margin:0">${esc(sc.name)}</h2><span class="muted">${sc.by?esc(sc.by)+' · ':''}${rs.length} characters</span></div><button class="btn small" data-act="closepreview">Close</button></div>
     ${sc.note?`<p class="muted">${esc(sc.note)}</p>`:''}
-    ${charGroupsHTML(rs, sc.fabled||[])}
+    ${sheetImgHTML(id)}
     <div class="row" style="margin-top:14px"><button class="btn" data-act="closepreview">Back</button><button class="btn primary" style="flex:1" data-act="setscript" data-v="${id}">Play ${esc(sc.name)}</button></div>
   </div></div>`;
 }
@@ -1516,25 +1524,28 @@ function iconSrc(k){
   return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="192" height="192"><g fill="none" stroke="${col}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${ROLE_ICON[k]||''}</g></svg>`);
 }
 function wrapText(x, text, w){ const out = []; let cur = ''; text.split(' ').forEach(wd=>{ const t = cur ? cur+' '+wd : wd; if(x.measureText(t).width>w && cur){ out.push(cur); cur = wd; } else cur = t; }); if(cur) out.push(cur); return out; }
-async function sheetCanvas(){
+async function sheetCanvas(id = S.script){
+  const keep = S.script; S.script = id;
+  const name = scriptName(), by = sheetBy(), roles = scriptRoles(), fab = fabled(), counts = playerCounts(), pools = Object.fromEntries(SHEET_TEAMS.map(([t])=>[t, pool(t)]));
+  S.script = keep;
   const DISP = '"IM Fell English SC", Georgia, serif', BODY = '"Alegreya Sans", system-ui, sans-serif';
   try{ await Promise.all([document.fonts.load(`60px ${DISP}`), document.fonts.load(`700 28px ${BODY}`), document.fonts.load(`24px ${BODY}`)]); }catch(e){}
   const W = 1600, M = 70, GAP = 50, colW = (W-2*M-GAP)/2, IC = 84, TX = colW-IC-18;
-  const keys = [...scriptRoles(), ...fabled()];
+  const keys = [...roles, ...fab];
   const imgs = Object.fromEntries(await Promise.all(keys.map(async k=>[k, await loadImg(iconSrc(k))])));
   const c = document.createElement('canvas'), x = c.getContext('2d');
   const measure = k => { x.font = `24px ${BODY}`; const ls = wrapText(x, R[k].ability, TX); return {ls, h:Math.max(IC, 40+ls.length*30)}; };
-  const plan = SHEET_TEAMS.map(([t,l])=>({l, ks:pool(t)})).filter(sec=>sec.ks.length).map(sec=>{
+  const plan = SHEET_TEAMS.map(([t,l])=>({l, ks:pools[t]})).filter(sec=>sec.ks.length).map(sec=>{
     const rows = []; for(let i=0;i<sec.ks.length;i+=2){ const a = measure(sec.ks[i]), b = sec.ks[i+1] ? measure(sec.ks[i+1]) : {h:0}; rows.push({ks:[sec.ks[i], sec.ks[i+1]], ms:[a,b], h:Math.max(a.h,b.h)+24}); }
     return {...sec, rows}; });
-  const counts = playerCounts(), rowH = 46;
+  const rowH = 46;
   let y = M + 100; plan.forEach(sec=>{ y += 62; sec.rows.forEach(r=>y += r.h); });
   const tableY = y + 30;
   c.width = W; c.height = Math.ceil(tableY + 70 + rowH*5 + 60 + M);
   x.fillStyle = '#fffdf8'; x.fillRect(0,0,c.width,c.height);
-  x.fillStyle = '#1b1712'; x.font = `64px ${DISP}`; x.fillText(scriptName(), M, M+52);
-  if(sheetBy()){ const tw = x.measureText(scriptName()).width; x.font = `italic 30px ${DISP}`; x.fillStyle = '#4a4036'; x.fillText(`by ${sheetBy()}`, M+tw+26, M+52); }
-  let fx = W-M; [...fabled()].reverse().forEach(k=>{ x.font = `26px ${BODY}`; const nw = x.measureText(R[k].name).width; fx -= nw; x.fillStyle = '#7a5c1a'; x.fillText(R[k].name, fx, M+42); fx -= 54; if(imgs[k]) x.drawImage(imgs[k], fx, M+6, 46, 46); fx -= 34; });
+  x.fillStyle = '#1b1712'; x.font = `64px ${DISP}`; x.fillText(name, M, M+52);
+  if(by){ const tw = x.measureText(name).width; x.font = `italic 30px ${DISP}`; x.fillStyle = '#4a4036'; x.fillText(`by ${by}`, M+tw+26, M+52); }
+  let fx = W-M; [...fab].reverse().forEach(k=>{ x.font = `26px ${BODY}`; const nw = x.measureText(R[k].name).width; fx -= nw; x.fillStyle = '#7a5c1a'; x.fillText(R[k].name, fx, M+42); fx -= 54; if(imgs[k]) x.drawImage(imgs[k], fx, M+6, 46, 46); fx -= 34; });
   const rule = (label, yy) => { x.font = `28px ${DISP}`; x.fillStyle = '#1b1712'; x.fillText(label, M, yy+26); const lw = x.measureText(label).width; x.strokeStyle = '#8b7d6b'; x.lineWidth = 2; x.beginPath(); x.moveTo(M+lw+18, yy+17); x.lineTo(W-M, yy+17); x.stroke(); };
   y = M + 100;
   plan.forEach(sec=>{
@@ -1554,7 +1565,7 @@ async function sheetCanvas(){
     if(j%2){ x.fillStyle = '#f8f3ea'; x.fillRect(M, y, W-2*M, rowH); }
     trow(l, counts.map(n=>DIST[n][i]), col, false, y); y += rowH; });
   x.font = `italic 22px ${BODY}`; x.fillStyle = '#6b6156';
-  x.fillText(pool('demon').includes('legion') ? 'Characters with [brackets] change these numbers. With Legion, most players are Legion and there are no Minions.' : 'Characters with [brackets] change these numbers.', M, y+40);
+  x.fillText(pools.demon.includes('legion') ? 'Characters with [brackets] change these numbers. With Legion, most players are Legion and there are no Minions.' : 'Characters with [brackets] change these numbers.', M, y+40);
   return c;
 }
 function pdfFromCanvas(c){
