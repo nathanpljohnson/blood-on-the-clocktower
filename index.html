@@ -728,13 +728,13 @@ const STEP = {
   dreamer:{how:"Wake the Dreamer and click who they point at. Then show 1 good and 1 evil character. One must be that player's character.",choose:'Choose a player',pick:'dreamer',rule:{notSelf:1},info:'dream'},
   seamstress:{how:'Wake the Seamstress. If they point at 2 players, click them and show Yes or No. They can only do this once. If they shake their head, just press Done.',choose:'Choose 2 players, or shake your head',pick:'seamstress',n:2,rule:{notSelf:1},optional:1,info:'yesno',label:'Are they on the same team?',need:a=>has(a,'noability')?'Ability already used':null},
   balloonist:{how:'Wake the Balloonist and show them a player. It must be a different character type (Townsfolk, Outsider, Minion, Demon) from last night.',info:'player',label:'Look at this player'},
-  'bountyhunter@1':{title:'Bounty Hunter',how:'Wake them and show them one evil player.',info:'player',label:'This player is evil'},
-  bountyhunter:{how:'The player they knew died. Wake them and show them another evil player.',info:'player',label:'This player is evil',need:()=>{ const k = S.players.find(p=>has(p,'bhknow')); return k && !k.alive ? null : 'Their evil player is alive'; }},
+  'bountyhunter@1':{title:'Bounty Hunter',how:'Wake them. Tap an evil player below to show their name on screen.',info:'player',label:'This player is evil'},
+  bountyhunter:{how:'The player they knew died. Wake them. Tap another evil player below to show their name on screen.',info:'player',label:'This player is evil',need:()=>{ const k = S.players.find(p=>has(p,'bhknow')); return k && !k.alive ? null : 'Their evil player is alive'; }},
   ogre:{how:"Wake the Ogre, show the screen, and click who they point at. The Ogre secretly joins that player's team.",choose:'Choose a player',pick:'ogre',rule:{notSelf:1}},
   chambermaid:{how:'Wake the Chambermaid, click the 2 players they point at, then show the number.',choose:'Choose 2 living players',pick:'chambermaid',n:2,rule:{alive:1,notSelf:1},info:'number',label:'How many of them woke tonight'},
   mathematician:{how:'Wake them and show how many players got wrong results since dawn because of another character (drunk, poisoned, or given false info).',info:'number',label:'Abilities that went wrong'},
   'leviathan@1':{title:'Leviathan',how:'After everyone wakes, announce that the Leviathan is in play.',deadOk:1,cards:()=>[{label:'Show everyone',card:{eyebrow:'The Demon in play is the',icon:'leviathan',big:'Leviathan',sub:'If more than 1 good player is executed, evil wins. After day 5, evil wins.',tone:'evil'}}]},
-  leviathan:{title:'Leviathan',how:()=>`Tomorrow is day ${S.phase.n}. You may remind everyone the Leviathan is in play. Good players executed so far: ${S.goodExecs||0} (2 means evil wins). ${S.phase.n>=5?'This is the last day: after it, evil wins.':''}`},
+  leviathan:{title:'Leviathan',cards:()=>[{label:'Show everyone',card:{eyebrow:'The Demon in play is the',icon:'leviathan',big:'Leviathan',sub:`Good players executed so far: ${S.goodExecs||0}. If more than 1 good player is executed, evil wins. After day 5, evil wins.`,tone:'evil'}}],how:()=>`Nobody wakes. Tomorrow is day ${S.phase.n}; at dawn you can show everyone the Leviathan screen. Good players executed so far: ${S.goodExecs||0} (2 means evil wins). ${S.phase.n>=5?'This is the last day: after it, evil wins.':''}`},
   innkeeper:{how:'Wake the Innkeeper, show the screen, and click the 2 players they point at. Both are safe tonight. Then click which one is drunk.',choose:'Choose 2 players',pick:'innkeeper',n:2},
   gambler:{how:'Wake the Gambler. Pick the character they guess below, then click the player they point at. If the guess is wrong, the Gambler dies.',choose:'Choose a player and guess their character',char:'script',pick:'gambler'},
   pithag:{how:'Wake the Pit-Hag. Pick the character they point at below, then click the player. If that character is not in play, the player becomes it: wake them and show them their new character.',choose:'Choose a player and a character',char:'script',pick:'pithag'},
@@ -747,12 +747,14 @@ const STEP = {
   nodashii:{how:'Wake the No Dashii, show the screen, and click who they point at.',choose:'Choose a player to kill',pick:'nodashii'},
   vortox:{how:'Wake the Vortox, show the screen, and click who they point at.',choose:'Choose a player to kill',pick:'vortox'},
   vigormortis:{how:'Wake the Vigormortis, show the screen, and click who they point at.',choose:'Choose a player to kill',pick:'vigormortis'},
-  alhadikhia:{how:'Wake the Al-Hadikhia. They may click 3 players; announce who was chosen. Wake each of the 3 in turn: they nod to live or shake to die. Mark each answer below, then press "Apply".',choose:'Choose 3 players, or shake your head',pick:'alhadikhia',n:3,optional:1},
+  alhadikhia:{how:'Wake the Al-Hadikhia and click the 3 players they point at. Then wake each of the 3 in turn and show them their screen: they nod to live or shake to die. Mark each answer below, then press "Apply". Everyone sees who was chosen at dawn.',choose:'Choose 3 players, or shake your head',pick:'alhadikhia',n:3,optional:1,
+    cards:()=>{ const f = ui.form.alhadikhia; if(!f?.ids) return []; const ns = f.ids.map(id=>P(id)?.name||'?');
+      return f.ids.map((id,i)=>({label:`Show ${ns[i]} their choice`, card:{eyebrow:`The Al-Hadikhia chose ${ns.join(', ')}`, big:`${ns[i]}: live or die?`, sub:'Nod to live. Shake your head to die. If all three choose to live, all three die.', tone:'evil'}})); }},
   assassin:{how:'Wake the Assassin. Once per game they may point at a player: that player dies, even if protected. If they shake their head, just press Done.',choose:'Choose a player to kill, or shake your head',pick:'assassin',optional:1,need:a=>has(a,'noability')?'Ability already used':null},
   barber:{title:'Barber',how:'The Barber died. Wake the Demon and show the screen. If they point at 2 players (not another Demon), click them: their characters swap. Then wake each to show their new character.',choose:'Choose 2 players to swap, or shake your head',pick:'barber',n:2,optional:1,need:()=>S.haircut?null:'The Barber did not die'},
   sweetheart:{how:'The Sweetheart died. Click a player: they are drunk for the rest of the game.',pick:'sweetheart',deadOk:1,need:a=>!a.alive && !S.flags?.sweet?null:'Not needed'},
   sage:{how:'The Demon killed the Sage. Wake them and show 2 players: one of them is the Demon.',info:'pair2',label:'One of these players is the Demon',deadOk:1,need:a=>has(a,'bydemon')?null:'Not killed by the Demon'},
-  banshee:{how:'The Demon killed the Banshee. At dawn, announce it. From now on they may nominate twice a day and vote twice per nomination.',deadOk:1,need:a=>has(a,'bydemon')?null:'Not killed by the Demon',cards:a=>[{label:'Show everyone',card:{eyebrow:'The Demon killed',icon:'banshee',big:`${a.name}, the Banshee`,tone:'good'}}]},
+  banshee:{how:'The Demon killed the Banshee. At dawn, show everyone the screen below. From now on they may nominate twice a day and vote twice per nomination.',deadOk:1,need:a=>has(a,'bydemon')?null:'Not killed by the Demon',cards:a=>[{label:'Show everyone',card:{eyebrow:'The Demon killed',icon:'banshee',big:`${a.name}, the Banshee`,tone:'good'}}]},
   professor:{how:'Wake the Professor. Once per game they may point at a dead player. If that player is a Townsfolk, they come back to life. If they shake their head, just press Done.',choose:'Choose a dead player, or shake your head',pick:'professor',rule:{dead:1},optional:1,need:a=>has(a,'noability')?'Ability already used':!S.players.some(p=>!p.alive)?'Nobody is dead yet':null},
   choirboy:{how:'The Demon killed the King. Wake the Choirboy and show them who the Demon is.',need:()=>S.players.some(p=>wake(p)==='king'&&has(p,'bydemon'))?null:'The King was not killed by the Demon',
     cards:()=>[{label:'Show who the Demon is',card:{eyebrow:'The Demon is',list:S.players.filter(isDemon).map(p=>p.name),tone:'good'}}]},
@@ -1195,7 +1197,7 @@ function kill(p,cause,force){
   }
   if(isDemon(p) && !alive().some(isDemon)){
     const sw = S.players.find(q=>q.alive && abilityOf(q)==='scarletwoman' && !impaired(q));
-    if(sw && before>=5){ sw.role = p.role; sw.as = null; sw.align = 'evil'; addRem(sw,'becameimp'); log(`${sw.name} (Scarlet Woman) becomes the ${R[p.role].name}. Wake them tonight to tell them.`); }
+    if(sw && before>=5){ sw.role = p.role; sw.as = null; sw.align = 'evil'; addRem(sw,'becameimp'); log(`${sw.name} (Scarlet Woman) becomes the ${R[p.role].name}. Wake them tonight and show them their new character.`); }
     else if(cause==='star-pass' && alive().some(q=>team(q)==='minion')){ ui.pick={kind:'starpass',actor:p.id}; return true; }
   }
   checkWin();
@@ -1260,7 +1262,9 @@ function toDay(){
   say(`Good morning, everyone. Open your eyes. ${died.length ? `${died.map(p=>p.name).join(' and ')} died in the night.` : 'Nobody died in the night.'}`);
   purge('dawn');
   S.haircut = null;
-  ui.show = {eyebrow:'Good morning. Last night…', big: died.length ? `${died.map(p=>p.name).join(' & ')} died` : 'Nobody died', tone:''};
+  const alh = (ui.form?.alhadikhia?.ids||[]).map(id=>P(id)?.name).filter(Boolean);
+  ui.show = {eyebrow:'Good morning. Last night…', big: died.length ? `${died.map(p=>p.name).join(' & ')} died` : 'Nobody died', sub: alh.length ? `The Al-Hadikhia chose ${alh.join(', ')}.` : '', tone:''};
+  if(alh.length) log(`Showed everyone the Al-Hadikhia chose ${alh.join(', ')}.`);
   ui.tab='main'; ui.vote=null;
   const pend = (S.pending||[]).shift(); if(pend && P(pend.actor)) ui.pick = pend;
 }
@@ -1486,12 +1490,12 @@ function suggHTML(k, a){
   const sg = (ui.sugg ||= {})[k] = infoSuggest(k,a);
   const chip = (x,i,f) => x.form.ans
     ? `<button class="chip-btn ${f?'f':'t'}" data-act="showyn" data-k="${k}" data-v="${x.form.ans}">${ic('eye')}${esc(x.label)}</button>`
-    : `<button class="chip-btn ${f?'f':'t'}" data-act="sugg" data-k="${k}" data-f="${f}" data-i="${i}">${esc(x.label)}</button>`;
+    : `<button class="chip-btn ${f?'f':'t'}" data-act="sugg" data-k="${k}" data-f="${f}" data-i="${i}" title="Show this on screen">${ic('eye')}${esc(x.label)}</button>`;
   const lieWhy = sg.lie==='vortox' ? 'the Vortox is alive, so their info must be false' : sg.lie==='impaired' ? `${why(a).replace(/^This is/,'they are').replace(/^They/,'they')}, so false info is usual` : '';
   const tl = sg.T.length ? `<div class="slab t">True right now${sg.lie==='vortox'?' (not allowed while the Vortox lives)':''}</div><div class="chips">${sg.T.map((x,i)=>chip(x,i,0)).join('')}</div>` : '';
   const fl = sg.lie && sg.F.length ? `<div class="slab f">False · ${esc(lieWhy)}</div><div class="chips">${sg.F.map((x,i)=>chip(x,i,1)).join('')}</div>` : '';
   if(!tl && !fl) return sg.note ? `<div class="truth">${esc(sg.note)}</div>` : '';
-  return `<div class="sugg">${sg.lie ? fl+tl : tl}${sg.note?`<div class="muted" style="font-size:.8rem">${esc(sg.note)}</div>`:''}</div>`;
+  return `<div class="sugg"><div class="muted" style="font-size:.8rem">Tap one to show it on screen, or pick your own below.</div>${sg.lie ? fl+tl : tl}${sg.note?`<div class="muted" style="font-size:.8rem">${esc(sg.note)}</div>`:''}</div>`;
 }
 function formFor(k,a){
   if(ui.form[k]) return ui.form[k];
@@ -1713,7 +1717,7 @@ function demonHit(a, t){
 function demonKill(a, t, ruled){
   const died = kill(t, `killed by the ${R[a?.role]?.name||'Demon'}${ruled?', your call':''}`);
   if(died || t.fake) addRem(t,'bydemon');
-  if(died && abilityOf(t)==='banshee' && !impaired(t)){ addRem(t,'banshee'); log(`${t.name} is the Banshee: announce it at dawn.`); }
+  if(died && abilityOf(t)==='banshee' && !impaired(t)){ addRem(t,'banshee'); log(`${t.name} is the Banshee: show everyone at dawn.`); }
   return died;
 }
 function demonAttack(a, t){
@@ -1824,7 +1828,7 @@ function act(kind, a, ts, pk){
       else if(regEvil(t)) log(`${t.name} registers as evil, so nothing happens.`);
       else if(nightKill(t,'killed by the Lycanthrope')) S.night.lyc = true;
       break;
-    case 'alhadikhia': log(`Al-Hadikhia ${a.name} chose ${ts.map(q=>q.name).join(', ')}. Announce these names, then ask each in turn.`); ui.form.alhadikhia = {ids:ts.map(q=>q.id), live:{}}; break;
+    case 'alhadikhia': log(`Al-Hadikhia ${a.name} chose ${ts.map(q=>q.name).join(', ')}. Show each of them their screen, then mark their answers.`); ui.form.alhadikhia = {ids:ts.map(q=>q.id), live:{}}; break;
     case 'assassin': addRem(a,'noability'); log(`Assassin ${a.name} chose ${t.name}.`); if(sob) kill(t,'killed by the Assassin',true); else log('The Assassin is drunk or poisoned, so nothing happens.'); break;
     case 'barber': {
       if(!sob) { log('The Demon is drunk or poisoned, so nothing swaps.'); break; }
@@ -2750,7 +2754,10 @@ document.addEventListener('click', e=>{
     case 'reveal': ui.show = passCard(p); return render();
     case 'start': return commit(startGame);
     case 'showstep': if(!formReady(el.dataset.k, ui.form[el.dataset.k])) return; ui.show = cardFor(el.dataset.k); noteShow(el.dataset.k); return render();
-    case 'sugg': { const k = el.dataset.k, x = ui.sugg?.[k]?.[el.dataset.f==='1'?'F':'T'][+el.dataset.i]; if(!x) return; const f = ui.form[k] ||= {}; delete f.zero; Object.assign(f, x.form); return render(); }
+    case 'sugg': { const k = el.dataset.k, x = ui.sugg?.[k]?.[el.dataset.f==='1'?'F':'T'][+el.dataset.i]; if(!x) return; const f = ui.form[k] ||= {}; delete f.zero; Object.assign(f, x.form);
+      if(f.zero && k==='librarian'){ ui.show = {eyebrow:'Outsiders in play', big:'0'}; note('Showed the Librarian: 0 Outsiders.'); }
+      else if(formReady(k, f)){ ui.show = cardFor(k); noteShow(k); }
+      return render(); }
     case 'showchoose': { const k = el.dataset.k, st = stepDef(k), s = steps().find(x=>x.k===k), a = s && stepActor(s); const ch = typeof st.choose==='function' ? st.choose(a) : st.choose; const evil = a ? (isEvil(a) || a.role==='lunatic') : false; ui.show = {big:ch, tone:evil?'evil':'good'}; return render(); }
     case 'showyn': { const k = el.dataset.k || 'fortuneteller'; ui.show = {eyebrow:stepDef(k).label, big:el.dataset.v, tone:'good'}; note(`Showed the ${stepTitle(k)}: ${el.dataset.v}.`); return render(); }
     case 'showzero': ui.show = {eyebrow:'Outsiders in play', big:'0'}; note('Showed the Librarian: 0 Outsiders.'); return render();
