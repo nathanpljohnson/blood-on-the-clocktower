@@ -266,7 +266,8 @@ textarea{width:100%;min-height:150px;resize:vertical}
 .mode button.sprev{border-top:0;border-radius:0 0 10px 10px;padding:6px 10px;font-size:.8rem;color:var(--muted);display:flex;align-items:center;gap:6px}
 .preview{position:fixed;inset:0;z-index:50;background:#000b;overflow-y:auto;padding:calc(16px + env(safe-area-inset-top,0px)) 16px calc(16px + env(safe-area-inset-bottom,0px))}
 .preview .sheetimg{display:block;width:100%;height:auto;border-radius:8px;margin-top:12px}
-.preview .pinner{max-width:1100px;margin:0 auto;background:var(--felt);border:1px solid var(--line);border-radius:14px;padding:16px}
+@media (max-width:600px){.preview{padding:8px}.preview .pinner{padding:10px}}
+.preview .pinner{max-width:760px;margin:0 auto;background:var(--felt);border:1px solid var(--line);border-radius:14px;padding:16px}
 .pbtn{width:100%;justify-content:center;padding:16px 18px;font-size:1.15rem}
 </style>
 
@@ -2466,11 +2467,21 @@ function readPhone(code){
     const [sid, list] = head.split(':'), roles = (list ? list.split(',') : SCRIPTS[sid]?.roles||[]).filter(k=>R[k]);
     if(ver!=='1' || !roles.length) return null;
     const players = ps.map(x=>{ const [name, r=''] = x.split('^'), evil = r.endsWith('!'), c = evil ? r.slice(0,-1) : r; return {name, role: c[0]==='*' ? c.slice(1) : roles[parseInt(c,36)], evil}; });
-    return players.every(p=>R[p.role]) ? {name:SCRIPTS[sid]?.name||'Blood on the Clocktower', roles, fabled:SCRIPTS[sid]?.fabled||[], players} : null;
+    return players.every(p=>R[p.role]) ? {id:sid, name:SCRIPTS[sid]?.name||'Blood on the Clocktower', roles, fabled:SCRIPTS[sid]?.fabled||[], players} : null;
   }catch(e){ return null; }
 }
 const phoneMode = /^#p[-=]/.test(location.hash), phone = phoneMode ? readPhone(location.hash.slice(3)) : null;
-let phoneMe = null, phoneOpen = false;
+let phoneMe = null, phoneOpen = false, phoneSheet = false, phoneImg = null;
+async function phoneSheetCanvas(){
+  if(phone.id==='teensy') teensyList = phone.roles;
+  return sheetCanvas(phone.id);
+}
+function phoneSheetHTML(){
+  return `<div class="preview" role="dialog" aria-label="${esc(phone.name)} character sheet"><div class="pinner">
+    <div class="row" style="justify-content:space-between;align-items:center;flex-wrap:nowrap"><b>${esc(phone.name)}</b><button class="btn small" data-act="psheetclose">Close</button></div>
+    ${phoneImg?`<img class="sheetimg" src="${phoneImg}" alt="${esc(phone.name)} character sheet"><p class="muted" style="font-size:.85rem">Pinch to zoom. Press and hold the image to save it, or tap Save image.</p>`:'<p class="muted" style="padding:40px 0;text-align:center">Drawing the character sheet…</p>'}
+    <div class="row"><button class="btn primary" data-act="psheetsave">Save image</button><button class="btn" data-act="psheetclose">Close</button></div></div></div>`;
+}
 function phoneHTML(){
   if(!phone) return `<div class="town phone"><h1>Blood on the Clocktower</h1><p class="muted">This link doesn't work. Ask the Storyteller to show the QR code again.</p></div>`;
   const me = phone.players[phoneMe], d = DIST[phone.players.length];
@@ -2478,6 +2489,7 @@ function phoneHTML(){
     : `<div class="pready"><div class="muted">You are</div><div class="big">${esc(me.name)}</div><button class="btn primary pbtn" data-act="pshow">${ic('eye')}Tap to see your character</button><span class="muted" style="font-size:.85rem">Wait until the Storyteller says so, and keep your screen to yourself.</span><button class="btn small" data-act="pme" data-i="">Not you? Pick again</button></div>`;
   return `<div class="town phone"><div class="muted">${esc(phone.name)} · ${phone.players.length} players</div>${top}
     <h2 style="margin-bottom:0">Characters on this script</h2>
+    <div class="row"><button class="btn small" data-act="psheet">${ic('book')}View as image</button><button class="btn small" data-act="psheetsave">Save image</button></div>
     ${d?`<p class="muted" style="margin:0">With ${phone.players.length} players: ${d[0]} Townsfolk, ${d[1]} Outsider${d[1]===1?'':'s'}, ${d[2]} Minion${d[2]===1?'':'s'}, ${d[3]} Demon. Characters with [brackets] change these numbers.</p>`:''}
     ${charGroupsHTML(phone.roles, phone.fabled)}</div>`;
 }
@@ -2485,7 +2497,7 @@ function renderPhone(){
   document.querySelector('.wrap').innerHTML = phoneHTML();
   const me = phone?.players[phoneMe];
   ui.show = phoneOpen && me ? {eyebrow:`${me.name}, you are the`, big:R[me.role].name, sub:R[me.role].ability, foot:me.evil?'You are evil':'You are good', tone:me.evil?'evil':'good', icon:me.role} : null;
-  document.getElementById('overlay').innerHTML = overlayHTML().replace('Click anywhere to hide','Tap anywhere to hide');
+  document.getElementById('overlay').innerHTML = phoneSheet ? phoneSheetHTML() : overlayHTML().replace('Click anywhere to hide','Tap anywhere to hide');
   document.getElementById('dock').innerHTML = '';
 }
 function phoneClick(e){
@@ -2494,6 +2506,9 @@ function phoneClick(e){
   if(a==='pme'){ phoneMe = el.dataset.i==='' ? null : +el.dataset.i; phoneOpen = false; }
   if(a==='pshow') phoneOpen = true;
   if(a==='hideshow') phoneOpen = false;
+  if(a==='psheetclose') phoneSheet = false;
+  if(a==='psheet'){ phoneSheet = true; if(!phoneImg) phoneSheetCanvas().then(c=>{ phoneImg = c.toDataURL('image/png'); renderPhone(); }); }
+  if(a==='psheetsave') return phoneSheetCanvas().then(c=>c.toBlob(b=>{ const l = document.createElement('a'); l.href = URL.createObjectURL(b); l.download = `${phone.name}.png`; document.body.append(l); l.click(); l.remove(); setTimeout(()=>URL.revokeObjectURL(l.href), 60000); }, 'image/png'));
   renderPhone(); if(a==='pme') scrollTo(0,0);
 }
 
