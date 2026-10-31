@@ -261,6 +261,8 @@ textarea{width:100%;min-height:150px;resize:vertical}
 .pnames .btn{justify-content:center;padding:14px 10px;font-size:1.05rem}
 .pready{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;border:1px solid var(--line);border-radius:14px;padding:18px}
 .cview{cursor:default}
+.ccc{height:30px;width:auto;opacity:.9}
+.cccnote{display:flex;align-items:center;gap:10px;font-size:.78rem;margin-top:8px}
 .mode .scard{display:flex;flex-direction:column;min-width:0}
 .mode .scard > button:first-child{flex:1;border-radius:10px 10px 0 0}
 .mode button.sprev{border-top:0;border-radius:0 0 10px 10px;padding:6px 10px;font-size:.8rem;color:var(--muted);display:flex;align-items:center;gap:6px}
@@ -274,6 +276,7 @@ textarea{width:100%;min-height:150px;resize:vertical}
 <div class="wrap">
   <header>
     <h1>Blood on the Clocktower <span id="appscript" class="appscript"></span></h1>
+    <img class="ccc" src="icons/ccc.png" alt="Community created content" title="Fan-made. Not an official Pandemonium Institute product. Character icons © The Pandemonium Institute.">
     <div class="hbtns">
       <button class="btn small" data-act="voice" id="voiceBtn">Voice off</button>
       <button class="btn small" data-act="tab" data-k="guide" id="guideBtn">Guide</button>
@@ -686,6 +689,8 @@ const ROLE_ICON = {
 let tokenImg = (()=>{ try{ return JSON.parse(localStorage.getItem('tb-token-images')||'{}') || {}; }catch(e){ return {}; } })();
 function saveTokens(){ try{ localStorage.setItem('tb-token-images', JSON.stringify(tokenImg)); return true; }catch(e){ ui.msg = 'Not enough browser space to keep all these images. Try smaller files.'; return false; } }
 let tokenMode = (()=>{ try{ return localStorage.getItem('tb-token-mode') || 'icon'; }catch(e){ return 'icon'; } })();
+const OFFICIAL = new Set('alchemist alhadikhia artist assassin balloonist banshee barber baron bootlegger bountyhunter butler cannibal cerenovus chambermaid chef choirboy clockmaker dreamer drunk empath eviltwin exorcist fanggu farmer fisherman flowergirl fool fortuneteller gambler goblin godfather golem harpy hermit imp innkeeper investigator juggler king klutz legion leviathan librarian lunatic lycanthrope marionette mathematician mayor minstrel monk moonchild mutant nodashii ogre oracle philosopher pithag pixie poisoner politician professor psychopath pukka ravenkeeper recluse sage saint savant scarletwoman seamstress sentinel slayer snakecharmer soldier spy sweetheart tinker towncrier toymaker undertaker vigormortis virgin vortox washerwoman widow witch wizard zealot zombuul'.split(' '));
+const offIcon = k => OFFICIAL.has(k) ? `icons/${k}.webp` : null;
 function tokenSVG(k, label){
   if(k && tokenImg[k] && tokenMode==='whole') return `<img class="tokensvg tokimg" src="${tokenImg[k]}" alt="">`;
   const r = R[k], evil = r && ['minion','demon'].includes(r.team);
@@ -694,7 +699,7 @@ function tokenSVG(k, label){
   return `<svg class="tokensvg" viewBox="0 0 100 100" aria-hidden="true">
     <circle cx="50" cy="50" r="47" fill="url(#parch)"/>
     <circle cx="50" cy="50" r="42.5" fill="none" class="tokring"/>
-    ${r ? `${tokenImg[k] ? `<image href="${tokenImg[k]}" x="17" y="5" width="66" height="60" preserveAspectRatio="xMidYMid meet"/>` : `<g transform="translate(30 10) scale(1.68)" class="glyph ${evil?'evil':'good'}">${ROLE_ICON[k]||''}</g>`}
+    ${r ? `${tokenImg[k] ? `<image href="${tokenImg[k]}" x="17" y="5" width="66" height="60" preserveAspectRatio="xMidYMid meet"/>` : offIcon(k) ? `<image href="${offIcon(k)}" x="12" y="2" width="76" height="76" preserveAspectRatio="xMidYMid meet"/>` : `<g transform="translate(30 10) scale(1.68)" class="glyph ${evil?'evil':'good'}">${ROLE_ICON[k]||''}</g>`}
     <text class="tokname" font-size="${fs}"${name.length>12?' textLength="104" lengthAdjust="spacingAndGlyphs"':''}><textPath href="#tokarc" startOffset="50%" text-anchor="middle">${esc(name)}</textPath></text>`
     : `<text x="50" y="60" text-anchor="middle" class="toknum">${esc(label??'')}</text>`}
   </svg>`;
@@ -1521,6 +1526,7 @@ function sheetText(){
 const loadImg = src => new Promise(res=>{ const i = new Image(); i.onload = ()=>res(i); i.onerror = ()=>res(null); i.src = src; });
 function iconSrc(k){
   if(tokenImg[k]) return tokenImg[k];
+  if(offIcon(k)) return offIcon(k);
   const col = R[k].team==='fabled' ? '#8a6a1f' : ['minion','demon'].includes(R[k].team) ? '#9b1d18' : '#1f5f9e';
   return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="192" height="192"><g fill="none" stroke="${col}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${ROLE_ICON[k]||''}</g></svg>`);
 }
@@ -1533,7 +1539,7 @@ async function sheetCanvas(id = S.script){
   try{ await Promise.all([document.fonts.load(`60px ${DISP}`), document.fonts.load(`700 28px ${BODY}`), document.fonts.load(`24px ${BODY}`)]); }catch(e){}
   const W = 1600, M = 70, GAP = 50, colW = (W-2*M-GAP)/2, IC = 84, TX = colW-IC-18;
   const keys = [...roles, ...fab];
-  const imgs = Object.fromEntries(await Promise.all(keys.map(async k=>[k, await loadImg(iconSrc(k))])));
+  const imgs = Object.fromEntries(await Promise.all(keys.map(async k=>[k, await loadImg(iconSrc(k))]))), badge = await loadImg('icons/ccc.png');
   const c = document.createElement('canvas'), x = c.getContext('2d');
   const measure = k => { x.font = `24px ${BODY}`; const ls = wrapText(x, R[k].ability, TX); return {ls, h:Math.max(IC, 40+ls.length*30)}; };
   const plan = SHEET_TEAMS.map(([t,l])=>({l, ks:pools[t]})).filter(sec=>sec.ks.length).map(sec=>{
@@ -1552,7 +1558,7 @@ async function sheetCanvas(id = S.script){
   plan.forEach(sec=>{
     rule(sec.l.toUpperCase(), y); y += 62;
     sec.rows.forEach(r=>{ r.ks.forEach((k,i)=>{ if(!k) return; const cx = M + i*(colW+GAP), evil = ['minion','demon'].includes(R[k].team);
-        if(imgs[k]) x.drawImage(imgs[k], cx, y, IC, IC);
+        const pad = offIcon(k) && !tokenImg[k] ? 14 : 0; if(imgs[k]) x.drawImage(imgs[k], cx-pad, y-pad, IC+2*pad, IC+2*pad);
         x.fillStyle = evil ? '#9b1d18' : '#1f5f9e'; x.font = `700 30px ${BODY}`; x.fillText(R[k].name, cx+IC+18, y+28);
         x.fillStyle = '#2a241d'; x.font = `24px ${BODY}`; r.ms[i].ls.forEach((ln,j)=>x.fillText(ln, cx+IC+18, y+64+j*30)); });
       y += r.h; });
@@ -1566,6 +1572,7 @@ async function sheetCanvas(id = S.script){
     if(j%2){ x.fillStyle = '#f8f3ea'; x.fillRect(M, y, W-2*M, rowH); }
     trow(l, counts.map(n=>DIST[n][i]), col, false, y); y += rowH; });
   x.font = `italic 22px ${BODY}`; x.fillStyle = '#6b6156';
+  if(badge) x.drawImage(badge, W-M-151, y+6, 151, 60);
   x.fillText(pools.demon.includes('legion') ? 'Characters with [brackets] change these numbers. With Legion, most players are Legion and there are no Minions.' : 'Characters with [brackets] change these numbers.', M, y+40);
   return c;
 }
@@ -2501,7 +2508,8 @@ function phoneHTML(){
     <h2 style="margin-bottom:0">Characters on this script</h2>
     <div class="row"><button class="btn small" data-act="psheet">${ic('book')}View as image</button><button class="btn small" data-act="psheetsave">${saveLabel}</button></div>
     ${d?`<p class="muted" style="margin:0">With ${phone.players.length} players: ${d[0]} Townsfolk, ${d[1]} Outsider${d[1]===1?'':'s'}, ${d[2]} Minion${d[2]===1?'':'s'}, ${d[3]} Demon. Characters with [brackets] change these numbers.</p>`:''}
-    ${charGroupsHTML(phone.roles, phone.fabled)}</div>`;
+    ${charGroupsHTML(phone.roles, phone.fabled)}
+    <div class="cccnote muted"><img class="ccc" src="icons/ccc.png" alt="Community created content"><span>Fan-made, not an official Pandemonium Institute product. Character icons © The Pandemonium Institute.</span></div></div>`;
 }
 function renderPhone(){
   document.querySelector('.wrap').innerHTML = phoneHTML();
