@@ -262,6 +262,8 @@ textarea{width:100%;min-height:150px;resize:vertical}
 .pnames .btn{justify-content:center;padding:14px 10px;font-size:1.05rem}
 .pready{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;border:1px solid var(--line);border-radius:14px;padding:18px}
 .cview{cursor:default}
+.show .bluffs{justify-content:center;gap:clamp(10px,3vw,24px)}
+.show .bluffs .bigtoken{width:clamp(84px,14vw,140px);height:clamp(84px,14vw,140px)}
 .ccc{height:30px;width:auto;opacity:.9}
 .cccnote{display:flex;align-items:center;gap:10px;font-size:.78rem;margin-top:8px}
 .mode .scard{display:flex;flex-direction:column;min-width:0}
@@ -823,7 +825,8 @@ function fillChars(){
 }
 function pickBluffs(){
   const used = new Set(S.players.flatMap(p=>[p.role,p.shown,p.as]));
-  return shuffle([...pool('townsfolk'),...pool('outsider').filter(k=>!['drunk','lunatic'].includes(k))].filter(r=>!used.has(r))).slice(0,3);
+  const free = [...pool('townsfolk'),...pool('outsider')].filter(r=>!used.has(r)), odd = k => ['drunk','lunatic'].includes(k);
+  return [...shuffle(free.filter(k=>!odd(k))), ...shuffle(free.filter(odd))].slice(0,3);
 }
 function setupMarks(){
   ['redherring','fauxpaw','twin','eviltf'].forEach(dropRem);
@@ -867,8 +870,8 @@ function startGame(){
 }
 function lunaticCard(a){
   if(!S.lunaticFake){ const others = shuffle(S.players.filter(p=>p!==a)); const nMin = Math.max(1, S.players.filter(p=>team(p)==='minion').length);
-    S.lunaticFake = {min: others.slice(0,nMin).map(p=>p.id), bluffs: shuffle(pool('townsfolk').filter(k=>!inPlay(k))).slice(0,3)}; save(); }
-  return {eyebrow:'You are the Demon. Your Minions are', list:S.lunaticFake.min.map(id=>P(id)?.name||'?'), sub:`These characters are not in play: ${S.lunaticFake.bluffs.map(b=>R[b].name).join(', ')}`, tone:'evil'};
+    S.lunaticFake = {min: others.slice(0,nMin).map(p=>p.id), bluffs: pickBluffs()}; save(); }
+  return {eyebrow:'You are the Demon. Your Minions are', list:S.lunaticFake.min.map(id=>P(id)?.name||'?'), bluffs:S.lunaticFake.bluffs, tone:'evil'};
 }
 
 /* ---------- deaths & wins ---------- */
@@ -1132,7 +1135,7 @@ function cardFor(k){
     case 'minioninfo': return {eyebrow:'You are evil. The Demon is', list:demons.map(p=>p.name), sub:`Minions: ${minions.map(p=>p.name).join(', ')}`, tone:'evil'};
     case 'demoninfo': {
       const legion = demons.length>1 && demons.every(p=>p.role==='legion');
-      return {eyebrow: legion ? 'You are Legion. Legion players are' : minions.length ? 'You are the Demon. Your Minions are' : 'You are the Demon', list:(legion?demons:minions).map(p=>p.name), sub:`These characters are not in play, so they are safe to bluff: ${S.bluffs.map(b=>R[b].name).join(', ')}`, tone:'evil'};
+      return {eyebrow: legion ? 'You are Legion. Legion players are' : minions.length ? 'You are the Demon. Your Minions are' : 'You are the Demon', list:(legion?demons:minions).map(p=>p.name), bluffs:S.bluffs, tone:'evil'};
     }
     case 'newimp': { const p=ps.find(q=>has(q,'becameimp')); return p ? cardYouAre(p) : null; }
   }
@@ -1474,7 +1477,7 @@ function setupHTML(){
       <p class="muted">Characters were shuffled into seats like drawing from a bag. Click a seat to swap a character by hand.</p>
       <div class="row"><button class="btn small" data-act="redeal">Shuffle again</button></div>
       ${parts.join('')}
-      ${evilInfo()?`<h3>Demon bluffs</h3><div class="row"><span>${S.bluffs.map(b=>R[b].name).join(', ')}</span><button class="btn small" data-act="rebluff">Re-roll</button></div>`:''}
+      ${evilInfo()?`<h3>Demon bluffs</h3><div class="row"><span>${S.bluffs.map(b=>R[b].name).join(', ')}</span><button class="btn small" data-act="rebluff">Re-roll</button></div>${S.bluffs.length<3?`<p class="muted">${S.bluffs.length ? `Only ${S.bluffs.length} good character${S.bluffs.length===1?' is':'s are'} left out of play on this script, so that's all the Demon can get.` : 'Every good character on this script is in play, so the Demon gets no bluffs.'}</p>`:''}`:''}
       <div style="margin-top:14px" class="row"><button class="btn" data-act="stage" data-to="chars">Back</button><button class="btn primary" style="flex:1" data-act="stage" data-to="reveal">Next: show players their characters</button></div>`;
   }
   if(S.stage==='reveal'){
@@ -2001,6 +2004,7 @@ function overlayHTML(){
     ${c.big?`<div class="bigtxt">${esc(c.big)}</div>`:''}
     ${c.timer?`<div class="bigtxt" data-timer>${fmt(timerLeft())}</div>`:''}
     ${c.list?`<div class="slist">${c.list.map(x=>`<span>${esc(x)}</span>`).join('')}</div>`:''}
+    ${c.bluffs?.length?`<div class="eyebrow" style="margin-top:6px">Not in play: safe to bluff</div><div class="row bluffs">${c.bluffs.filter(k=>R[k]).map(k=>`<div class="bigtoken">${tokenSVG(k)}</div>`).join('')}</div>`:''}
     ${c.lines?`<div class="slines">${c.lines.map(x=>`<p>${esc(x)}</p>`).join('')}</div>`:''}
     ${c.sub?`<div class="ssub">${esc(c.sub)}</div>`:''}
     ${c.foot?`<div class="foot">${esc(c.foot)}</div>`:''}
