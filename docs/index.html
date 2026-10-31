@@ -1,17 +1,21 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"></head><body>
 <title>Blood on the Clocktower</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Alegreya+Sans:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Grenze+Gotisch:wght@500;600;700&family=Cormorant+SC:wght@500;600;700&family=Cormorant+Garamond:wght@500;600;700&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&display=swap">
 <style>
 /* Layout: felt table with the seating clock on the left, the storyteller's guided panel on the right; stacks on phones. Player screens cover everything. */
 :root{
-  --bg:#100c0b; --felt:#1b1412; --felt2:#251b18; --line:#3b2b25;
-  --ink:#eee6d3; --muted:#9fb0a6; --brass:#d1a94f;
-  --town:#7aa7e0; --out:#6cc3b5; --minion:#e08a4f; --demon:#e0574c;
+  --bg:#0b0907; --felt:#15110d; --felt2:#1e1813; --line:#382c21;
+  --ink:#ede3cc; --muted:#a3947d; --brass:#d4ae68;
+  --gold:linear-gradient(180deg,#f6e2ad 0%,#d4ae68 42%,#a07a3a 78%,#c9a25c 100%);
+  --hair:rgba(212,174,104,.22);
+  --town:#6b9ee6; --out:#5fb8ac; --minion:#e0823f; --demon:#d8423a;
   --poison:#b98cf0; --safe:#79d0e6; --warn:#e8c25a; --vote:#f0d36b;
   --goodbg:#0f1e2e; --evilbg:#2a0f0d;
-  --display:"IM Fell English SC", Georgia, serif;
-  --body:"Alegreya Sans", system-ui, sans-serif;
+  --display:"Cormorant SC", "Cormorant Garamond", Georgia, serif;
+  --gothic:"Grenze Gotisch", "Cormorant SC", Georgia, serif;
+  --num:"Cormorant Garamond", Georgia, serif;
+  --body:"Spectral", Georgia, serif;
   color-scheme:dark;
 }
 *{box-sizing:border-box}
@@ -167,6 +171,13 @@ textarea{width:100%;min-height:150px;resize:vertical}
 .nom .who{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tallyctl{display:flex;align-items:center;gap:6px;font-variant-numeric:tabular-nums}.tallyctl b{min-width:1.6em;text-align:center;font-size:1.1rem}
 .verdict{font-size:.78rem;color:var(--muted);text-align:right}.nom.on .verdict{color:#ffb3ab;font-weight:700}
+.roster{display:flex;flex-wrap:wrap;gap:6px}
+.rchip{display:inline-flex;align-items:stretch;border:1px solid var(--line);border-radius:999px;background:var(--bg);overflow:hidden}
+.rchip>button{background:none;border:0;padding:7px 13px;font-weight:600;display:inline-flex;align-items:center;gap:6px}
+.rchip.on{border-color:var(--brass);background:color-mix(in srgb,var(--brass) 16%,var(--bg))}
+.rchip i{font-style:normal;font-size:.72rem;min-width:1.5em;height:1.5em;border-radius:50%;background:var(--brass);color:#1b1608;display:inline-flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums}
+.rchip .rdel{padding:0 9px;border-left:1px solid var(--line);color:var(--muted)}
+.seated{flex:1}.seated b{font-size:1.1rem}
 .blockline{font-size:.9rem;margin:0 0 8px}
 .nom .votersbtn{grid-column:1/-1;justify-self:start;padding:3px 9px;font-size:.8rem}
 .fgrow{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;justify-content:space-between;border:1px solid var(--line);border-radius:8px;padding:6px 10px;margin:4px 0 8px;font-size:.9rem}
@@ -303,6 +314,220 @@ textarea{width:100%;min-height:150px;resize:vertical}
 @media (max-width:600px){.preview{padding:8px}.preview .pinner{padding:10px}}
 .preview .pinner{max-width:760px;margin:0 auto;background:var(--felt);border:1px solid var(--line);border-radius:14px;padding:16px}
 .pbtn{width:100%;justify-content:center;padding:16px 18px;font-size:1.15rem}
+
+/* ================= Art pass: candlelit grimoire. Visuals only; layout rules above stay as they are. ================= */
+html{background:#060504}
+body{background:
+  radial-gradient(1200px 700px at 50% -10%, rgba(214,150,70,.13), transparent 60%),
+  radial-gradient(900px 600px at 85% 110%, rgba(150,30,25,.10), transparent 60%),
+  radial-gradient(ellipse at 50% 40%, var(--bg) 0%, #050403 100%);
+  background-attachment:fixed;font-size:15.5px;letter-spacing:.005em;-webkit-font-smoothing:antialiased;min-height:100vh}
+/* film grain + vignette over everything, never blocks clicks */
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:60;opacity:.07;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .9 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:59;background:radial-gradient(ellipse at 50% 45%, transparent 55%, rgba(0,0,0,.55) 100%)}
+::selection{background:rgba(212,174,104,.35)}
+
+/* type */
+h1{font:600 2rem/1 var(--gothic);letter-spacing:.01em;background:var(--gold);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none;filter:drop-shadow(0 2px 0 #000) drop-shadow(0 0 18px rgba(212,150,70,.25))}
+.appscript{font:italic 400 1rem var(--body);color:var(--muted);-webkit-text-fill-color:var(--muted)}
+h2{font:600 1.45rem/1.1 var(--display);letter-spacing:.04em;color:var(--brass);display:flex;align-items:center;gap:12px}
+h2::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--hair),transparent)}
+h3{font:600 .8rem var(--display);letter-spacing:.2em;color:#b49a6c}
+.muted{color:var(--muted)}
+.ability{font-family:var(--body);font-style:italic}
+
+/* panels: lacquered wood with gilt corners */
+.card,.table,.focus,.tip,.timerbox,.vote,.savant,.recap .card,.preview .pinner{position:relative}
+.card{background:linear-gradient(180deg,#19140f,#110d0a);border:1px solid #33281e;box-shadow:inset 0 1px 0 rgba(255,225,170,.05),0 24px 50px -28px #000,0 0 0 1px #000}
+.card::after,.table::after{content:"";position:absolute;inset:5px;pointer-events:none;border-radius:inherit;
+  background:
+   linear-gradient(var(--brass),var(--brass)) top left/14px 1px no-repeat, linear-gradient(var(--brass),var(--brass)) top left/1px 14px no-repeat,
+   linear-gradient(var(--brass),var(--brass)) top right/14px 1px no-repeat, linear-gradient(var(--brass),var(--brass)) top right/1px 14px no-repeat,
+   linear-gradient(var(--brass),var(--brass)) bottom left/14px 1px no-repeat, linear-gradient(var(--brass),var(--brass)) bottom left/1px 14px no-repeat,
+   linear-gradient(var(--brass),var(--brass)) bottom right/14px 1px no-repeat, linear-gradient(var(--brass),var(--brass)) bottom right/1px 14px no-repeat;opacity:.45}
+.side>.card::after{inset:6px}
+header{border-bottom:0;background:linear-gradient(90deg,transparent,var(--hair),transparent) bottom/100% 1px no-repeat}
+
+/* the table: dark oxblood leather around an engraved clock */
+.table{background:
+   radial-gradient(circle at 50% 50%, rgba(214,140,60,.16) 0, transparent 34%),
+   radial-gradient(circle at 50% 48%, #2c1511 0, #1b0d0a 46%, #0e0706 74%);
+  border:1px solid #3a2a1d;box-shadow:inset 0 0 80px #000,inset 0 0 0 5px #120a07,inset 0 0 0 6px rgba(212,174,104,.28),0 30px 60px -30px #000}
+.circle::before{inset:0;border:0;box-shadow:none;border-radius:50%;background:var(--face) center/100% 100% no-repeat}
+.circle::after{content:"";position:absolute;inset:30%;border-radius:50%;pointer-events:none;background:radial-gradient(circle,rgba(255,190,110,.16),transparent 70%);animation:candle 5s ease-in-out infinite}
+@keyframes candle{0%,100%{opacity:.75;transform:scale(1)}30%{opacity:1;transform:scale(1.03)}55%{opacity:.82}75%{opacity:.95;transform:scale(.99)}}
+.center{z-index:1}
+.center .ph{font:600 clamp(1.7rem,5.4vw,3rem)/1 var(--gothic);background:var(--gold);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 2px 0 #000) drop-shadow(0 0 14px rgba(212,150,70,.3))}
+.center .ph::before{content:"";display:block;width:clamp(26px,6vw,40px);height:clamp(26px,6vw,40px);margin:0 auto 8px;opacity:.8;background:center/contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40' fill='none' stroke='%23d4ae68' stroke-width='1.2'%3E%3Ccircle cx='20' cy='20' r='7'/%3E%3Cpath d='M20 4v6M20 30v6M4 20h6M30 20h6M8.7 8.7l4.2 4.2M27.1 27.1l4.2 4.2M8.7 31.3l4.2-4.2M27.1 12.9l4.2-4.2'/%3E%3C/svg%3E")}
+:root.night .center .ph::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40' fill='none' stroke='%23c9d4ee' stroke-width='1.2'%3E%3Cpath d='M26 8a13 13 0 1 0 6 18A10.5 10.5 0 0 1 26 8z'/%3E%3Cpath d='M9 9l.8 1.6L11.4 11l-1.6.8L9 13.4l-.8-1.6L6.6 11l1.6-.4zM31 31l.6 1.2 1.2.6-1.2.6-.6 1.2-.6-1.2-1.2-.6 1.2-.6z'/%3E%3C/svg%3E")}
+.center .stat{color:#cdbf9f;font-family:var(--body)}
+.center .stat b{font:600 clamp(1.4rem,4.2vw,2.2rem)/1 var(--num);color:#f0d28a;text-shadow:0 0 16px rgba(240,190,90,.35)}
+.center .clock{font-family:var(--num);font-weight:600}
+
+/* tokens: gilt bezel (drawn in the SVG), soft team glow, drop shadow onto the leather */
+.tok{box-shadow:0 8px 14px -4px rgba(0,0,0,.85),0 2px 3px rgba(0,0,0,.6),0 0 0 1.5px rgba(0,0,0,.6),0 0 16px -3px var(--c,transparent)}
+.seat .tok::before{content:"";position:absolute;inset:-3px;border-radius:50%;pointer-events:none;box-shadow:0 0 0 1.5px color-mix(in srgb,var(--c,#000) 85%,transparent);opacity:.9}
+.seat.blank .tok{filter:saturate(.25) brightness(.62)}
+.pname{font:600 .82rem var(--body);color:#efe4cb;text-shadow:0 1px 2px #000,0 0 8px #000;letter-spacing:.01em}
+.tokname{font-family:"Cormorant SC",Georgia,serif;font-weight:700;fill:#2b1d0c;letter-spacing:.02em}
+.toknum{font:600 34px "Cormorant Garamond",Georgia,serif;fill:#6b5430}
+.tokring{stroke:#6b4d24;stroke-width:.9;opacity:.5}
+.seat.sel .tok{box-shadow:0 8px 14px -4px #000,0 0 0 3px var(--brass),0 0 22px rgba(212,174,104,.55)}
+.seat.waking .tok{animation:wake2 2.4s ease-in-out infinite}
+@keyframes wake2{0%,100%{box-shadow:0 8px 14px -4px #000,0 0 0 3px #f3e6c4,0 0 18px rgba(255,230,180,.45)}50%{box-shadow:0 8px 14px -4px #000,0 0 0 4px #fff3d6,0 0 34px rgba(255,210,140,.75)}}
+.seat.pickable .tok{animation:pick2 1.6s ease-in-out infinite}
+@keyframes pick2{50%{box-shadow:0 8px 14px -4px #000,0 0 0 3px var(--warn),0 0 22px rgba(232,194,90,.5)}}
+.seat.chosen .tok{box-shadow:0 8px 14px -4px #000,0 0 0 3px var(--safe),0 0 22px rgba(121,208,230,.55)}
+.seat.voting .tok{box-shadow:0 8px 14px -4px #000,0 0 0 3px var(--vote),0 0 22px rgba(240,211,107,.55)}
+/* death: grey token under a black shroud, like the physical grimoire */
+.seat.dead .tok{filter:grayscale(1) brightness(.5) contrast(1.05)}
+.seat.dead .tok::after{content:"";bottom:auto;top:-8%;left:30%;width:40%;height:60%;padding:0;border-radius:0;background:linear-gradient(90deg,#060606,#232323 45%,#0b0b0b);
+  clip-path:polygon(0 0,100% 0,100% 82%,50% 100%,0 82%);box-shadow:none;filter:drop-shadow(0 2px 2px #000)}
+.seat.dead.ghost .tok::after{content:"";background:linear-gradient(90deg,#060606,#232323 45%,#0b0b0b)}
+.seat.dead.ghost .pname::after{content:" ●";color:#f2ead6;font-size:.7em;vertical-align:.1em;text-shadow:0 0 6px rgba(255,255,255,.6)}
+.seat.dead .pname{color:#9b9183}
+
+/* reminder chips: small enamel tags */
+.chip{font:600 .6rem var(--body);letter-spacing:.08em;padding:1px 6px 1px 5px;border-radius:3px;background:linear-gradient(180deg,#1b1511,#0d0a08);border:1px solid color-mix(in srgb,var(--k,var(--line)) 60%,transparent);color:var(--k,var(--muted));box-shadow:0 1px 2px #000}
+
+/* buttons: lacquer, gilt, blood */
+.btn{background:linear-gradient(180deg,#231b15,#17120e);border:1px solid #3e3126;box-shadow:inset 0 1px 0 rgba(255,225,170,.06),0 2px 4px rgba(0,0,0,.4);font-family:var(--body);font-weight:500;transition:border-color .15s,filter .15s,transform .05s}
+.btn:hover:not(:disabled){border-color:rgba(212,174,104,.6);filter:brightness(1.12)}
+.btn:active:not(:disabled){transform:translateY(1px)}
+.btn.primary{background:var(--gold);color:#22170a;border-color:#7a5a2a;font-weight:600;text-shadow:0 1px 0 rgba(255,240,200,.45);box-shadow:inset 0 1px 0 rgba(255,250,225,.6),inset 0 -2px 0 rgba(90,60,20,.35),0 3px 10px -2px rgba(212,160,80,.35)}
+.btn.danger{background:linear-gradient(180deg,#5c1813,#3b0c09);border-color:#9a2c24;color:#ffd9d2;box-shadow:inset 0 1px 0 rgba(255,170,150,.15),0 3px 12px -4px rgba(200,50,40,.45)}
+.btn.evil{background:linear-gradient(180deg,#56150f,#360b08);border-color:#9a2c24;color:#ffd9d2}
+.btn.good{background:linear-gradient(180deg,#183252,#0e2038);border-color:#3e6fb0;color:#dbe8ff}
+.btn.big{font:600 1.08rem var(--body);letter-spacing:.01em;padding:13px 18px}
+.hb{font-family:var(--body)}
+.hb:hover:not(:disabled),.hb.on{background:rgba(212,174,104,.08);border-color:rgba(212,174,104,.25)}
+.x{background:linear-gradient(180deg,#201914,#141009);border-color:#3a2e23}
+
+/* tabs, stepper, counts */
+.tabs{border-bottom:1px solid #2d241b}
+.tab{font:600 .98rem var(--display);letter-spacing:.06em;color:#8f826d}
+.tab.on{color:#f1e3c0;border-image:var(--gold) 1;border-bottom:2px solid}
+.stepper span{font:600 .74rem var(--display);letter-spacing:.14em;background:#0e0b08;border:1px solid #2a2119}
+.stepper span.on{background:var(--gold);color:#22170a;border-color:#7a5a2a}
+.counts div{background:linear-gradient(180deg,#17120e,#0f0c09);border-color:#30261c}
+.counts b{font:600 1.6rem var(--num);color:#f0dcae}
+.counts .ok{border-color:#5f8a5a}.counts .bad{border-color:#a8382f}
+
+/* night step card */
+.focus{background:radial-gradient(120% 90% at 0% 0%,rgba(212,174,104,.09),transparent 55%),linear-gradient(180deg,#1d1712,#14100c);border-color:rgba(212,174,104,.45);box-shadow:0 18px 40px -24px #000}
+.focus .ftitle{font:600 2rem/1.05 var(--display);letter-spacing:.03em;color:#f6e9c8}
+.focus .eyebrow{font-family:var(--display);letter-spacing:.2em;color:#b49a6c}
+.truth{border-left:2px solid rgba(212,174,104,.6);background:linear-gradient(90deg,rgba(212,174,104,.06),transparent 70%)}
+.warn{border-left:2px solid var(--warn);background:linear-gradient(90deg,rgba(232,194,90,.07),transparent 70%)}
+.step{background:#0f0c09;border-color:#2c231a}
+.step .t{font:600 1.08rem var(--display);letter-spacing:.03em}
+.progress{background:#0e0b08;height:3px}.progress span{background:var(--gold);box-shadow:0 0 10px rgba(212,174,104,.6)}
+
+/* inputs */
+select,input[type=text],input[type=number],textarea{background:#0c0907;border-color:#3a2e23;box-shadow:inset 0 2px 4px rgba(0,0,0,.5)}
+select:focus,input:focus,textarea:focus{border-color:rgba(212,174,104,.7);outline:none;box-shadow:inset 0 2px 4px rgba(0,0,0,.5),0 0 0 3px rgba(212,174,104,.15)}
+
+/* script picker + character cards */
+.mode button{background:linear-gradient(180deg,#17120e,#0f0c09);border-color:#30261c}
+.mode button b{font:600 1.12rem var(--display);letter-spacing:.03em}
+.mode button.on{border-color:rgba(212,174,104,.75);background:radial-gradient(120% 120% at 0 0,rgba(212,174,104,.14),transparent 60%),#17120e;box-shadow:0 0 0 1px rgba(212,174,104,.25),0 8px 22px -12px rgba(212,160,80,.4)}
+.cbtn{background:linear-gradient(180deg,#15110d,#0e0b08);border-color:#2e251b}
+.cbtn b{font:600 1.05rem var(--display);letter-spacing:.02em}
+.cbtn.on{box-shadow:0 0 0 1px var(--c),0 6px 18px -10px var(--c)}
+.rchip{background:linear-gradient(180deg,#1a1410,#100c09);border-color:#3a2e23}
+.rchip.on{background:linear-gradient(180deg,#3a2c16,#22190d);border-color:rgba(212,174,104,.7);box-shadow:0 0 14px -6px rgba(212,174,104,.7)}
+.rchip i{background:var(--gold);font-family:var(--num);font-weight:700}
+.nom{background:linear-gradient(180deg,#15110d,#0f0c09);border-color:#2e251b}
+.nom.on{background:linear-gradient(90deg,rgba(150,30,25,.28),rgba(60,12,10,.2));border-color:#a8382f;box-shadow:0 0 18px -8px rgba(216,66,58,.7)}
+.tallyctl b{font:600 1.35rem var(--num)}
+.timer{font:600 2.8rem/1 var(--num);color:#f0dcae}
+.tally{font-family:var(--num)}
+
+/* banners */
+.banner.pick{background:linear-gradient(90deg,rgba(232,194,90,.16),rgba(232,194,90,.05));border-color:rgba(232,194,90,.6);font-weight:600}
+.banner.win{font:600 1.3rem var(--display);background:linear-gradient(90deg,rgba(150,30,25,.35),rgba(60,12,10,.2));border-color:#a8382f}
+.toast{background:linear-gradient(180deg,#1d1712,#15110d);border-color:#3a2e23}
+.menu{background:linear-gradient(180deg,#1e1813,#15110d);border-color:rgba(212,174,104,.55);box-shadow:0 20px 40px rgba(0,0,0,.7)}
+.menu .mh{font-family:var(--display);letter-spacing:.06em}
+.pop{background:linear-gradient(180deg,#1e1813,#14100c);border-color:rgba(212,174,104,.55);box-shadow:0 20px 50px rgba(0,0,0,.75)}
+.pophead b{font:600 1.4rem var(--display)}
+
+/* player-facing reveal screens: spotlight, halo, slow sigil */
+.show{background:radial-gradient(ellipse at 50% 40%,#1c1610,#060504 70%)}
+.show.good{background:radial-gradient(ellipse at 50% 38%,#1d3a62 0%,#0c1a2e 45%,#04070d 80%)}
+.show.evil{background:radial-gradient(ellipse at 50% 38%,#5d1610 0%,#2a0907 45%,#080202 80%)}
+.show::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 120%,rgba(0,0,0,.8),transparent 60%),radial-gradient(ellipse at 50% -20%,rgba(255,220,160,.08),transparent 50%)}
+.show>*{position:relative}
+.show .eyebrow{font:italic 400 clamp(1.1rem,3.4vw,1.6rem) var(--body);color:#cdbf9f;letter-spacing:.01em}
+.show .bigtxt{font:600 clamp(3rem,12vw,7rem)/1 var(--gothic);background:linear-gradient(180deg,#fff6dc 0%,#e8cf93 55%,#b48b46 100%);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 4px 0 rgba(0,0,0,.6)) drop-shadow(0 0 30px rgba(255,200,120,.25))}
+.show.evil .bigtxt{background:linear-gradient(180deg,#ffe3dc 0%,#f08a78 50%,#a3241a 100%);-webkit-background-clip:text;background-clip:text;filter:drop-shadow(0 4px 0 rgba(0,0,0,.6)) drop-shadow(0 0 34px rgba(220,60,40,.45))}
+.show.good .bigtxt{background:linear-gradient(180deg,#f2f7ff 0%,#a9c8f2 55%,#4f7fc4 100%);-webkit-background-clip:text;background-clip:text;filter:drop-shadow(0 4px 0 rgba(0,0,0,.6)) drop-shadow(0 0 34px rgba(90,150,230,.4))}
+.show .bigtoken{position:relative;box-shadow:0 20px 50px rgba(0,0,0,.8),0 0 60px rgba(255,210,140,.18)}
+.show .bigtoken::before{content:"";position:absolute;inset:-14%;border-radius:50%;border:1px dashed rgba(212,174,104,.45);animation:sigil 60s linear infinite;pointer-events:none}
+.show .bigtoken::after{content:"";position:absolute;inset:-7%;border-radius:50%;border:1px solid rgba(212,174,104,.3);pointer-events:none}
+.show.evil .bigtoken{box-shadow:0 20px 50px rgba(0,0,0,.8),0 0 70px rgba(220,60,40,.35)}
+.show.good .bigtoken{box-shadow:0 20px 50px rgba(0,0,0,.8),0 0 70px rgba(90,150,230,.3)}
+@keyframes sigil{to{transform:rotate(360deg)}}
+.show .slist span{font:600 clamp(1.4rem,5vw,2.4rem) var(--display);background:linear-gradient(180deg,rgba(0,0,0,.35),rgba(0,0,0,.55));border-color:rgba(212,174,104,.35);box-shadow:inset 0 1px 0 rgba(255,230,180,.08)}
+.show .ssub{font-family:var(--body);color:#e8dcc0}
+.show .foot{font:600 1rem var(--display);letter-spacing:.3em}
+.show .hint{font-family:var(--body);font-style:italic}
+.fr{font-family:var(--display);background:linear-gradient(180deg,rgba(0,0,0,.35),rgba(0,0,0,.6))}
+
+/* night: moonlight replaces candlelight */
+:root.night{--bg:#06080d;--felt:#0d111a;--felt2:#131a26;--line:#232c3d;--ink:#dfe3ea;--muted:#8d97a8;--hair:rgba(170,190,230,.2)}
+:root.night body{background:radial-gradient(1100px 650px at 50% -10%,rgba(110,140,210,.14),transparent 60%),radial-gradient(ellipse at 50% 40%,#080b12 0%,#020305 100%);background-attachment:fixed}
+:root.night .card{background:linear-gradient(180deg,#111723,#0a0e16);border-color:#222b3b}
+:root.night .table{background:radial-gradient(circle at 50% 50%,rgba(140,170,240,.13) 0,transparent 34%),radial-gradient(circle at 50% 48%,#141c33 0,#0b1022 46%,#05070e 74%);border-color:#222b3b;box-shadow:inset 0 0 80px #000,inset 0 0 0 5px #060912,inset 0 0 0 6px rgba(170,190,230,.22),0 30px 60px -30px #000}
+:root.night .circle::after{background:radial-gradient(circle,rgba(170,200,255,.13),transparent 70%)}
+:root.night .table::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:.5;
+  background:radial-gradient(40% 25% at 20% 30%,rgba(160,180,220,.10),transparent 70%),radial-gradient(45% 30% at 80% 70%,rgba(160,180,220,.08),transparent 70%);background-size:200% 200%;animation:fog 38s ease-in-out infinite alternate}
+@keyframes fog{from{background-position:0% 0%,100% 100%}to{background-position:100% 60%,0% 30%}}
+:root.night .focus{background:radial-gradient(120% 90% at 0% 0%,rgba(170,190,230,.08),transparent 55%),linear-gradient(180deg,#141b28,#0d121c);border-color:rgba(212,174,104,.4)}
+:root.night .btn{background:linear-gradient(180deg,#161d2a,#0f141e);border-color:#2a3446}
+:root.night .btn.primary{background:var(--gold);border-color:#7a5a2a}
+:root.night .btn.danger,:root.night .btn.evil{background:linear-gradient(180deg,#5c1813,#3b0c09);border-color:#9a2c24}
+:root.night .step,:root.night .nom,:root.night .counts div,:root.night .mode button,:root.night .cbtn{background:linear-gradient(180deg,#111723,#0b0f17);border-color:#232c3d}
+:root.night .tab{color:#7f899b}
+:root.night .pname{color:#e6eaf2}
+
+@media (max-width:520px){.nom{grid-template-columns:minmax(0,1fr) auto}.nom .verdict{grid-column:1/-1;text-align:left;margin-top:-4px}}
+/* flat controls: solid fills, hairline borders, no bevels or drop shadows */
+.btn,.btn:hover:not(:disabled){background:#1c1611;box-shadow:none;text-shadow:none;filter:none}
+.btn:hover:not(:disabled){background:#241c16}
+.btn:active:not(:disabled){transform:none;background:#2a211a}
+.btn.primary,.btn.primary:hover:not(:disabled){background:#d4ae68;color:#1f160a;border-color:#d4ae68;box-shadow:none;text-shadow:none}
+.btn.primary:hover:not(:disabled){background:#e0bc78}
+.btn.danger,.btn.evil,.btn.danger:hover:not(:disabled),.btn.evil:hover:not(:disabled){background:#4a120e;border-color:#9a2c24;box-shadow:none}
+.btn.danger:hover:not(:disabled),.btn.evil:hover:not(:disabled){background:#5a1712}
+.btn.good,.btn.good:hover:not(:disabled){background:#132a46;border-color:#3e6fb0}
+.x{background:#1a1410}
+.card{background:#15110d;box-shadow:none}
+.focus{background:#1a1511;box-shadow:none}
+.stepper span.on,.rchip i,.progress span{background:#d4ae68;box-shadow:none}
+.chip{background:#120e0b;box-shadow:none}
+.counts div,.mode button,.cbtn,.nom,.step,.rchip{background:#120e0b;box-shadow:none}
+.mode button.on{background:#1f1912;box-shadow:none}
+.cbtn.on{box-shadow:none}
+.rchip.on{background:#2a2014;box-shadow:none}
+.nom.on{background:#2a0e0b;box-shadow:none}
+select,input[type=text],input[type=number],textarea,select:focus,input:focus,textarea:focus{box-shadow:none}
+.menu,.pop{background:#1a1511;box-shadow:0 12px 30px rgba(0,0,0,.6)}
+.toast{background:#1a1511}
+.banner.pick{background:rgba(232,194,90,.1)}
+.banner.win{background:rgba(150,30,25,.3)}
+.truth{background:none}.warn{background:none}
+.show .slist span{background:rgba(0,0,0,.4);box-shadow:none}
+:root.night .btn,:root.night .btn:hover:not(:disabled){background:#121826;border-color:#2a3446}
+:root.night .btn.primary{background:#d4ae68;border-color:#d4ae68}
+:root.night .btn.danger,:root.night .btn.evil{background:#4a120e;border-color:#9a2c24}
+:root.night .card{background:#0d121b}
+:root.night .focus{background:#111724}
+:root.night .step,:root.night .nom,:root.night .counts div,:root.night .mode button,:root.night .cbtn{background:#0b0f17}
+/* numbers always sit on the line and line up in columns */
+body,.stepper span,.counts b,.timer,.tally,.tallyctl b,.center .stat b,.center .clock,.rchip i,.toknum,.step .num,.show .bigtxt{font-variant-numeric:lining-nums tabular-nums}
+@media (prefers-reduced-motion:reduce){.circle::after,.show .bigtoken::before,:root.night .table::before,.seat.waking .tok,.seat.pickable .tok{animation:none}}
 </style>
 
 <div class="wrap">
@@ -326,7 +551,9 @@ textarea{width:100%;min-height:150px;resize:vertical}
 </div>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
-    <radialGradient id="parch" cx="38%" cy="32%" r="75%"><stop offset="0" stop-color="#f6ecd2"/><stop offset=".65" stop-color="#e2cfa3"/><stop offset="1" stop-color="#b99a62"/></radialGradient>
+    <radialGradient id="parch" cx="40%" cy="30%" r="78%"><stop offset="0" stop-color="#f8efd8"/><stop offset=".55" stop-color="#e6d3a8"/><stop offset=".9" stop-color="#c2a26a"/><stop offset="1" stop-color="#a7844c"/></radialGradient>
+    <linearGradient id="bezel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f3dca4"/><stop offset=".35" stop-color="#b98f48"/><stop offset=".6" stop-color="#6e4f22"/><stop offset="1" stop-color="#d2ad66"/></linearGradient>
+    <radialGradient id="tokshade" cx="50%" cy="50%" r="50%"><stop offset=".78" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#3a2408" stop-opacity=".45"/></radialGradient>
     <path id="tokarc" d="M12 54 A38 38 0 0 0 88 54"/>
   </defs>
 </svg>
@@ -587,6 +814,14 @@ const shuffle = a => { a=[...a]; for(let i=a.length-1;i>0;i--){const j=Math.floo
 const tbTeam = t => SCRIPTS.tb.roles.filter(k=>R[k].team===t);
 const TEENSY = ['investigator','chef','empath','fortuneteller','monk','slayer','drunk','saint','poisoner','scarletwoman','imp'];
 let teensyList = (()=>{ try{ const v = JSON.parse(localStorage.getItem('tb-teensy-list')); if(Array.isArray(v) && v.length) return v; }catch(e){} return [...TEENSY]; })();
+// Your regular players. Kept in this browser; DEFAULT_ROSTER ships with the app so every device starts with them.
+const DEFAULT_ROSTER = ['Joseph','Anya','Ava','Luke Constantineau','Luke McLeod','Nathan','Marnie','Bo','Jaylen','Zach','Connor','Anna Louise','Makena','Maria'];
+const ROSTER_V = 1; // bump when DEFAULT_ROSTER changes so new defaults reach saved lists once
+let roster = (()=>{ try{ const v = JSON.parse(localStorage.getItem('tb-roster')), ver = +localStorage.getItem('tb-roster-v')||0;
+  if(Array.isArray(v)){ if(ver>=ROSTER_V) return v; const m = [...v]; DEFAULT_ROSTER.forEach(n=>{ if(!m.some(r=>r.toLowerCase()===n.toLowerCase())) m.push(n); }); return m; } }catch(e){} return [...DEFAULT_ROSTER]; })();
+const saveRoster = () => { try{ localStorage.setItem('tb-roster', JSON.stringify(roster)); localStorage.setItem('tb-roster-v', String(ROSTER_V)); }catch(e){} };
+const sameName = (a,b) => a.trim().toLowerCase()===b.trim().toLowerCase();
+const blankPlayer = name => ({id:uid(),name,role:null,shown:null,alive:true,ghost:true,rem:[],revealed:false});
 const saveTeensy = () => { try{ localStorage.setItem('tb-teensy-list', JSON.stringify(teensyList)); }catch(e){} };
 const scriptRoles = () => S.script==='teensy' ? teensyList : (SCRIPTS[S.script]||SCRIPTS.tb).roles;
 const scriptName = () => (SCRIPTS[S.script]||SCRIPTS.tb).name;
@@ -724,7 +959,10 @@ function tokenSVG(k, label){
   const name = r ? r.name : '';
   const fs = name.length>12 ? 12 : name.length>9 ? 13 : 14.5;
   return `<svg class="tokensvg" viewBox="0 0 100 100" aria-hidden="true">
-    <circle cx="50" cy="50" r="47" fill="url(#parch)"/>
+    <circle cx="50" cy="50" r="49" fill="url(#bezel)"/>
+    <circle cx="50" cy="50" r="46.4" fill="url(#parch)"/>
+    <circle cx="50" cy="50" r="46.4" fill="url(#tokshade)"/>
+    <circle cx="50" cy="50" r="46.4" fill="none" stroke="#3b2a12" stroke-opacity=".5" stroke-width=".8"/>
     <circle cx="50" cy="50" r="42.5" fill="none" class="tokring"/>
     ${r ? `${tokenImg[k] ? `<image href="${tokenImg[k]}" x="17" y="5" width="66" height="60" preserveAspectRatio="xMidYMid meet"/>` : offIcon(k) ? `<image href="${offIcon(k)}" x="12" y="2" width="76" height="76" preserveAspectRatio="xMidYMid meet"/>` : `<g transform="translate(30 10) scale(1.68)" class="glyph ${evil?'evil':'good'}">${ROLE_ICON[k]||''}</g>`}
     <text class="tokname" font-size="${fs}"${name.length>12?' textLength="104" lengthAdjust="spacingAndGlyphs"':''}><textPath href="#tokarc" startOffset="50%" text-anchor="middle">${esc(name)}</textPath></text>`
@@ -1682,8 +1920,11 @@ function setupHTML(){
   const n = S.players.length;
   if(S.stage==='players' && ui.editTeensy) return head + teensyEditorHTML();
   if(S.stage==='players'){
-    const [t,o,m,d] = DIST[n];
-    const counts = playerCounts();
+    const [t,o,m,d] = DIST[n] || [0,0,0,0];
+    const counts = playerCounts(), lo = Math.min(...counts), hi = Math.max(...counts), okN = counts.includes(n);
+    const extra = S.players.filter(p=>!roster.some(r=>sameName(r,p.name)));
+    const seatNo = nm => S.players.findIndex(p=>sameName(p.name,nm));
+    const chip = nm => { const i = seatNo(nm); return `<span class="rchip ${i>=0?'on':''}"><button data-act="rseat" data-v="${esc(nm)}" aria-pressed="${i>=0}">${i>=0?`<i>${i+1}</i>`:''}${esc(nm)}</button>${ui.editRoster?`<button class="rdel" data-act="rdel" data-v="${esc(nm)}" aria-label="Remove ${esc(nm)} from your list">${ic('x')}</button>`:''}</span>`; };
     return head + `${S.log.length||S.stage!=='players'?'':`<div class="tip"><span>First time telling the story?</span><button class="btn small primary" data-act="tab" data-k="guide">Read the 2-minute guide</button></div>`}
       <h2>Which game?</h2>
       <div class="mode scripts">${Object.entries(SCRIPTS).map(([id,sc])=>{ const rs = id==='teensy' ? teensyList : sc.roles;
@@ -1693,11 +1934,13 @@ function setupHTML(){
       <div class="row" style="margin-bottom:10px"><button class="btn small" data-act="tab" data-k="script">${ic('book')}Share the ${esc(scriptName())} character sheet</button></div>
       ${fabled().map(k=>`<p class="muted"><b>${R[k].name}:</b> ${esc(R[k].ability)}</p>`).join('')}
       <h2>Who is playing?</h2>
-      <label class="f">Number of players<select id="count" data-change="count">${counts.map(v=>`<option ${v===n?'selected':''}>${v}</option>`).join('')}</select></label>
-      <p class="muted" style="margin-top:8px">${t} Townsfolk · ${o} Outsider${o===1?'':'s'} · ${m} Minion${m>1?'s':''} · ${d} Demon${n<=6?(evilInfo()?'. The Toymaker gives evil their normal info even with 5 or 6 players.':'. With 6 or fewer players, Minions and the Demon do not learn each other.'):''}</p>
-      <p class="muted" style="margin:0 0 6px">You can also drag seats on the table to change the order.</p><label class="f">Names, clockwise around the table<textarea id="names" data-change="names">${esc(S.players.map(p=>p.name).join('\n'))}</textarea></label>
+      <p class="muted" style="margin:0 0 8px">Tap names in the order they sit, clockwise. Drag seats on the table to fix the order.</p>
+      <div class="roster">${[...roster, ...extra.map(p=>p.name)].map(chip).join('')}</div>
+      <div class="row" style="margin-top:8px"><input type="text" id="rnew" placeholder="New name" aria-label="New player's name" autocomplete="off" style="flex:1;min-width:0"><button class="btn small primary" data-act="radd">${ic('plus')}Add</button></div>
+      <div class="row" style="margin-top:8px"><span class="seated"><b>${n}</b> seated</span>${n?'<button class="btn small" data-act="rclear">Clear seats</button>':''}<button class="btn small ${ui.editRoster?'primary':''}" data-act="redit">${ui.editRoster?'Done editing':'Edit list'}</button></div>
+      ${okN?`<p class="muted" style="margin-top:8px">${t} Townsfolk · ${o} Outsider${o===1?'':'s'} · ${m} Minion${m>1?'s':''} · ${d} Demon${n<=6?(evilInfo()?'. The Toymaker gives evil their normal info even with 5 or 6 players.':'. With 6 or fewer players, Minions and the Demon do not learn each other.'):''}</p>`:`<p class="warn">${esc(scriptName())} needs ${lo} to ${hi} players. ${n<lo?`Seat ${lo-n} more.`:`Take ${n-hi} off.`}</p>`}
       ${dupNames().length?`<p class="warn">Two players are called ${esc(dupNames().join(', '))}. Give everyone a different name so phones and the record can tell them apart.</p>`:''}
-      <div style="margin-top:12px"><button class="btn primary big" data-act="stage" data-to="chars" ${dupNames().length?'disabled':''}>Next: choose characters</button></div>`;
+      <div style="margin-top:12px"><button class="btn primary big" data-act="stage" data-to="chars" ${dupNames().length||!okN?'disabled':''}>Next: choose characters</button></div>`;
   }
   if(S.stage==='chars'){
     const tg = targets(), total = bagTotal(), ok = bagOK();
@@ -1801,7 +2044,7 @@ async function sheetCanvas(id = S.script){
   const keep = S.script; S.script = id;
   const name = scriptName(), by = sheetBy(), roles = scriptRoles(), fab = fabled(), counts = playerCounts(), pools = Object.fromEntries(SHEET_TEAMS.map(([t])=>[t, pool(t)]));
   S.script = keep;
-  const DISP = '"IM Fell English SC", Georgia, serif', BODY = '"Alegreya Sans", system-ui, sans-serif';
+  const DISP = '"Cormorant SC", Georgia, serif', BODY = '"Spectral", Georgia, serif';
   try{ await Promise.all([document.fonts.load(`60px ${DISP}`), document.fonts.load(`700 28px ${BODY}`), document.fonts.load(`24px ${BODY}`)]); }catch(e){}
   const W = 1600, M = 70, GAP = 50, colW = (W-2*M-GAP)/2, IC = 84, TX = colW-IC-18;
   const keys = [...roles, ...fab];
@@ -2569,6 +2812,15 @@ document.addEventListener('click', e=>{
       if(ui.pick?.kind==='voters' && ui.pick.i===i){ ui.pick = null; return render(); }
       ui.pick = {kind:'voters', i, chosen:[...(x.voters||[])]}; return render(); }
     case 'dv': { const v = el.dataset.v; S.day.dvManual = v==='auto' ? null : v==='yes'; save(); return render(); }
+    case 'rseat': { const nm = el.dataset.v, i = S.players.findIndex(p=>sameName(p.name,nm));
+      return commit(()=>{ if(i>=0) S.players.splice(i,1); else S.players.push(blankPlayer(nm)); S.chosen = []; }, i>=0 ? `Unseated ${nm}` : `Seated ${nm}`); }
+    case 'radd': { const box = document.getElementById('rnew'), nm = (box?.value||'').trim().replace(/\s+/g,' '); if(!nm) return box?.focus();
+      if(!roster.some(r=>sameName(r,nm))){ roster.push(nm); saveRoster(); }
+      if(S.players.some(p=>sameName(p.name,nm))){ ui.msg = `${nm} is already seated.`; return render(); }
+      commit(()=>{ S.players.push(blankPlayer(nm)); S.chosen = []; }, `Added ${nm}`); document.getElementById('rnew')?.focus(); return; }
+    case 'rdel': { const nm = el.dataset.v; roster = roster.filter(r=>!sameName(r,nm)); saveRoster(); return render(); }
+    case 'redit': ui.editRoster = !ui.editRoster; return render();
+    case 'rclear': return commit(()=>{ S.players = []; S.chosen = []; }, 'Cleared seats');
     case 'goodwins': return commit(()=>setWinner('Good wins! The Demon is dead.'));
     case 'showcard': { const k = el.dataset.k, s0 = steps().find(x=>x.k===k); if(!s0) return; const c = stepDef(k).cards(stepActor(s0))[+el.dataset.i]; if(!c) return; ui.show = c.card; note(`${c.label.replace(/^Show /,'Showed ')}.`); return render(); }
     case 'youare': ui.show = cardYouAre(p); note(`Showed ${p.name} they are now the ${R[seen(p)].name}.`); return render();
@@ -2685,7 +2937,7 @@ document.addEventListener('keydown', e=>{
     else return;
     return render();
   }
-  if(typing) return;
+  if(typing){ if(e.key==='Enter' && e.target.id==='rnew'){ e.preventDefault(); document.querySelector('[data-act=radd]')?.click(); } return; }
   if((e.key==='Enter' || e.key===' ') && e.target.closest('.seat')){ e.preventDefault(); return e.target.closest('.seat').click(); }
   if(e.target.closest('button')) return;
   if(e.key==='Enter'){
@@ -2923,7 +3175,21 @@ function startTown(){
   if(!owner || townMode) startTown(); else publishBoard();
 })();
 
-S = load() || fresh(8);
+// The table is an engraved clock face: rings, minute ticks and roman numerals behind the seats.
+function clockFace(){
+  const g = 'rgba(212,174,104,', out = [], R0 = 500, pt = (r,a) => [R0+r*Math.sin(a), R0-r*Math.cos(a)].map(v=>v.toFixed(1)).join(' ');
+  out.push(`<circle cx="500" cy="500" r="472" fill="none" stroke="${g}.32)" stroke-width="2"/><circle cx="500" cy="500" r="463" fill="none" stroke="${g}.14)" stroke-width="1"/>`);
+  out.push(`<circle cx="500" cy="500" r="410" fill="none" stroke="rgba(0,0,0,.38)" stroke-width="86"/><circle cx="500" cy="500" r="453" fill="none" stroke="${g}.1)"/><circle cx="500" cy="500" r="367" fill="none" stroke="${g}.18)"/>`);
+  for(let i=0;i<60;i++){ const a = i*Math.PI/30, h = i%5===0; out.push(`<path d="M${pt(h?328:340,a)}L${pt(360,a)}" stroke="${g}${h?.42:.2})" stroke-width="${h?3:1.4}" stroke-linecap="round"/>`); }
+  ['XII','I','II','III','IV','V','VI','VII','VIII','IX','X','XI'].forEach((n,i)=>{ const a = i*Math.PI/6, [x,y] = pt(292,a).split(' ');
+    out.push(`<text x="${x}" y="${y}" transform="rotate(${i*30} ${x} ${y})" text-anchor="middle" dominant-baseline="central" font-family="Georgia,serif" font-size="30" letter-spacing="1" fill="${g}.3)">${n}</text>`); });
+  out.push(`<circle cx="500" cy="500" r="256" fill="none" stroke="${g}.16)"/><circle cx="500" cy="500" r="248" fill="none" stroke="${g}.08)"/>`);
+  for(let i=0;i<24;i++){ const a = i*Math.PI/12; out.push(`<path d="M${pt(i%2?150:70,a)}L${pt(246,a)}" stroke="${g}${i%2?.035:.06})"/>`); }
+  out.push(`<circle cx="500" cy="500" r="70" fill="none" stroke="${g}.08)"/>`);
+  return `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">${out.join('')}</svg>`)}")`;
+}
+document.getElementById('circle')?.style.setProperty('--face', clockFace());
+S = load() || fresh(roster.length ? 0 : 8);
 if(!S.script) S.script = S.teensy ? 'teensy' : 'tb';
 S.flags ||= {}; S.night ||= {changed:[]}; S.lastDay ||= {};
 loadUi();
