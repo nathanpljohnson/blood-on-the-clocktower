@@ -493,6 +493,38 @@ select:focus,input:focus,textarea:focus{border-color:rgba(212,174,104,.7);outlin
 :root.night .pname{color:#e6eaf2}
 
 @media (max-width:520px){.nom{grid-template-columns:minmax(0,1fr) auto}.nom .verdict{grid-column:1/-1;text-align:left;margin-top:-4px}}
+/* flat controls: solid fills, hairline borders, no bevels or drop shadows */
+.btn,.btn:hover:not(:disabled){background:#1c1611;box-shadow:none;text-shadow:none;filter:none}
+.btn:hover:not(:disabled){background:#241c16}
+.btn:active:not(:disabled){transform:none;background:#2a211a}
+.btn.primary,.btn.primary:hover:not(:disabled){background:#d4ae68;color:#1f160a;border-color:#d4ae68;box-shadow:none;text-shadow:none}
+.btn.primary:hover:not(:disabled){background:#e0bc78}
+.btn.danger,.btn.evil,.btn.danger:hover:not(:disabled),.btn.evil:hover:not(:disabled){background:#4a120e;border-color:#9a2c24;box-shadow:none}
+.btn.danger:hover:not(:disabled),.btn.evil:hover:not(:disabled){background:#5a1712}
+.btn.good,.btn.good:hover:not(:disabled){background:#132a46;border-color:#3e6fb0}
+.x{background:#1a1410}
+.card{background:#15110d;box-shadow:none}
+.focus{background:#1a1511;box-shadow:none}
+.stepper span.on,.rchip i,.progress span{background:#d4ae68;box-shadow:none}
+.chip{background:#120e0b;box-shadow:none}
+.counts div,.mode button,.cbtn,.nom,.step,.rchip{background:#120e0b;box-shadow:none}
+.mode button.on{background:#1f1912;box-shadow:none}
+.cbtn.on{box-shadow:none}
+.rchip.on{background:#2a2014;box-shadow:none}
+.nom.on{background:#2a0e0b;box-shadow:none}
+select,input[type=text],input[type=number],textarea,select:focus,input:focus,textarea:focus{box-shadow:none}
+.menu,.pop{background:#1a1511;box-shadow:0 12px 30px rgba(0,0,0,.6)}
+.toast{background:#1a1511}
+.banner.pick{background:rgba(232,194,90,.1)}
+.banner.win{background:rgba(150,30,25,.3)}
+.truth{background:none}.warn{background:none}
+.show .slist span{background:rgba(0,0,0,.4);box-shadow:none}
+:root.night .btn,:root.night .btn:hover:not(:disabled){background:#121826;border-color:#2a3446}
+:root.night .btn.primary{background:#d4ae68;border-color:#d4ae68}
+:root.night .btn.danger,:root.night .btn.evil{background:#4a120e;border-color:#9a2c24}
+:root.night .card{background:#0d121b}
+:root.night .focus{background:#111724}
+:root.night .step,:root.night .nom,:root.night .counts div,:root.night .mode button,:root.night .cbtn{background:#0b0f17}
 /* numbers always sit on the line and line up in columns */
 body,.stepper span,.counts b,.timer,.tally,.tallyctl b,.center .stat b,.center .clock,.rchip i,.toknum,.step .num,.show .bigtxt{font-variant-numeric:lining-nums tabular-nums}
 @media (prefers-reduced-motion:reduce){.circle::after,.show .bigtoken::before,:root.night .table::before,.seat.waking .tok,.seat.pickable .tok{animation:none}}
