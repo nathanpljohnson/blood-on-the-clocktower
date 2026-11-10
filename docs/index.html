@@ -228,9 +228,19 @@ textarea{width:100%;min-height:150px;resize:vertical}
 .btn{display:inline-flex;align-items:center;justify-content:center}
 .x .ic{margin:0}
 @media (min-width:901px){.side{position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto;overscroll-behavior:contain}}
-.seat{cursor:pointer}
-.seat.dropto .tok{box-shadow:0 0 0 4px var(--brass)}
-.seat.dragging{opacity:.4}
+.seat{cursor:grab;touch-action:none;user-select:none}
+.circle.reordering .seat{transition:left 180ms ease,top 180ms ease}
+.circle.reordering .seat-gap{transition:none}
+.circle.reordering .seat.dragging{opacity:0;pointer-events:none}
+.circle.reordering .center{visibility:hidden}
+.seat-gap{pointer-events:none;color:var(--brass);z-index:2}
+.seat-gap .tok{display:grid;place-items:center;font-size:1.5rem;border:2px dashed var(--brass);background:var(--felt);box-shadow:0 0 0 5px #d4ae6818}
+.seat-gap .pname{color:var(--ink);font-size:.78rem}
+.seat-drag-status{position:absolute;inset:35% 18%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:6px;pointer-events:none;color:var(--ink);overflow-wrap:anywhere;line-height:1.2}
+.seat-drag-status b{font:400 clamp(1rem,3vw,1.6rem) var(--display);color:var(--brass)}
+.seat-drag-status small{color:var(--muted)}
+.seat-drag-ghost{position:fixed!important;z-index:100;pointer-events:none;opacity:.92;transform:translate(-50%,-115%) scale(1.08);width:100px;--seat:70px;filter:drop-shadow(0 8px 10px #0008)}
+@media(prefers-reduced-motion:reduce){.circle.reordering .seat{transition:none}}
 .seat.chosen .tok{box-shadow:0 0 0 4px var(--safe)}
 .focus{border:1px solid var(--brass);border-left-width:3px;background:var(--felt2);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
 .focus .eyebrow{font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
@@ -1906,8 +1916,8 @@ function seatHTML(p,i,n){
   const waking = cur && cur.actors.includes(p) && !ui.pick;
   const cls = ['seat', p.role?team(p):'blank', p.alive&&!p.fake?'':'dead', (!p.alive||p.fake)&&p.ghost?'ghost':'', ui.sel===p.id?'sel':'', ui.pick?'pickable':'', waking?'waking':'', ui.pick?.chosen?.includes(p.id)?'chosen':'', ui.pop===p.id?'sel':''].join(' ');
   const tokKey = !p.role ? null : seen(p);
-  const tip = `${p.name}${p.role?' · '+roleLabel(p):''}${p.rem.length?' · '+p.rem.map(r=>r.label).join(', '):''}. Click for details, right-click for quick actions, drag to move seats.`;
-  return `<div role="button" tabindex="0" draggable="true" class="${cls}" style="left:${x}%;top:${y}%" data-act="seat" data-id="${p.id}" aria-label="${esc(p.name)}" title="${esc(tip)}">
+  const tip = `${p.name}${p.role?' · '+roleLabel(p):''}${p.rem.length?' · '+p.rem.map(r=>r.label).join(', '):''}. Click for details, right-click for quick actions, drag between names to move seats. Keyboard: Space to pick up, arrows to move, Enter to drop, Escape to cancel.`;
+  return `<div role="button" tabindex="0" draggable="false" aria-keyshortcuts="Space" class="${cls}" style="left:${x}%;top:${y}%" data-act="seat" data-id="${p.id}" aria-label="${esc(p.name)}" title="${esc(tip)}">
     <span class="tok">${tokenSVG(tokKey, i+1)}</span><span class="pname">${esc(p.name)}</span><span class="marks">${marks.join('')}</span></div>`;
 }
 
@@ -1957,7 +1967,7 @@ function setupHTML(){
       <div class="row" style="margin-bottom:10px"><button class="btn small" data-act="tab" data-k="script">${ic('book')}Share the ${esc(scriptName())} character sheet</button></div>
       ${fabled().map(k=>`<p class="muted"><b>${R[k].name}:</b> ${esc(R[k].ability)}</p>`).join('')}
       <h2>Who is playing?</h2>
-      <p class="muted" style="margin:0 0 8px">Tap names in the order they sit, clockwise. Drag seats on the table to fix the order.</p>
+      <p class="muted" style="margin:0 0 8px">Tap names in the order they sit, clockwise. Drag a name between two others. Release in the gap to insert it; the other seats shift automatically. With a keyboard, focus a name and press Space, use the arrows, then Enter.</p>
       <div class="roster">${[...roster, ...extra.map(p=>p.name)].map(chip).join('')}</div>
       <div class="row" style="margin-top:8px"><input type="text" id="rnew" placeholder="New name" aria-label="New player's name" autocomplete="off" style="flex:1;min-width:0"><button class="btn small primary" data-act="radd">${ic('plus')}Add</button></div>
       <div class="row" style="margin-top:8px"><span class="seated"><b>${n}</b> seated</span>${n?'<button class="btn small" data-act="rclear">Clear seats</button>':''}<button class="btn small ${ui.editRoster?'primary':''}" data-act="redit">${ui.editRoster?'Done editing':'Edit list'}</button></div>
@@ -2342,6 +2352,7 @@ function playerBody(p){
     ${THINKS.includes(p.role)?`<label class="f">Thinks they are<select id="ps-${p.id}" data-change="shown" data-id="${p.id}">${charOpts(p.shown, Object.keys(R).filter(k=>R[k].team===(p.role==='lunatic'?'demon':'townsfolk') && (scriptRoles().includes(k)||k===p.shown)))}</select></label>`:''}
     ${['alchemist','philosopher','pixie','cannibal'].includes(p.role)&&S.stage!=='players'?`<label class="f">Has the ability of<select id="pa-${p.id}" data-change="as" data-id="${p.id}"><option value="">their own</option>${charOpts(p.as, Object.keys(R).filter(k=>R[k].team!=='fabled'))}</select></label>`:''}
     ${S.stage==='game'?`<label class="f">Team<select id="pt-${p.id}" data-change="align" data-id="${p.id}"><option value="good" ${!isEvil(p)?'selected':''}>Good</option><option value="evil" ${isEvil(p)?'selected':''}>Evil</option></select></label>`:''}</div>`);
+  if(S.players.length>1) parts.push(`<label class="f">Move ${esc(p.name)} before<select data-change="insertseat" data-id="${p.id}"><option value="">Choose a player…</option>${S.players.filter(q=>q!==p).map(q=>`<option value="${q.id}">${esc(q.name)}</option>`).join('')}</select></label>`);
   if(!p.role) return parts.join('');
   if(S.stage==='game') parts.push('<p class="warn">Only change a character mid-game to fix a mistake. The new character takes effect from now on, and the change is noted in the Summary.</p>');
   parts.push(`<p class="ability">${esc(R[p.role].ability)}</p>`);
@@ -2903,22 +2914,84 @@ function noteShow(k){
 }
 
 /* right-click menu, long-press, drag to reorder, keyboard */
-let suppressClick = false, pressTimer = null, dragId = null;
+let suppressClick = false, pressTimer = null, dragId = null, seatDrag = null, seatPress = null;
+// Preview changes positions only. The saved order changes once, on a valid drop.
+function seatInsertion(players,id,gap){
+  const moving = players.find(p=>p.id===id), rest = players.filter(p=>p.id!==id);
+  if(!moving) return players.slice();
+  rest.splice(Math.max(0,Math.min(gap,rest.length)),0,moving);
+  return rest;
+}
+function placeSeat(el,i,n){
+  const a = -Math.PI/2 + i*2*Math.PI/n;
+  el.style.left = `${50+41*Math.cos(a)}%`; el.style.top = `${50+41*Math.sin(a)}%`;
+}
+function startSeatDrag(id,keyboard=false){
+  const circle = document.getElementById('circle'), source = circle.querySelector(`.seat[data-id="${id}"]`);
+  if(!source || S.players.length<2 || ui.pick || ui.vote) return false;
+  clearTimeout(pressTimer);
+  seatDrag = {id,keyboard,gap:S.players.findIndex(p=>p.id===id),valid:true,source}; dragId=id;
+  circle.classList.add('reordering'); source.classList.add('dragging');
+  const gap = document.createElement('div'); gap.className='seat seat-gap';
+  gap.innerHTML='<span class="tok">+</span><span class="pname">Drop here</span>'; gap.setAttribute('aria-hidden','true'); circle.append(gap);
+  const status = document.createElement('div'); status.className='seat-drag-status'; status.setAttribute('role','status'); status.setAttribute('aria-live','polite'); circle.append(status);
+  if(!keyboard){ const ghost=source.cloneNode(true); ghost.removeAttribute('data-act'); ghost.removeAttribute('data-id'); ghost.removeAttribute('tabindex'); ghost.setAttribute('aria-hidden','true'); ghost.className='seat seat-drag-ghost'; document.body.append(ghost); }
+  previewSeatGap(seatDrag.gap); return true;
+}
+function previewSeatGap(gap){
+  if(!seatDrag) return;
+  const d=seatDrag, circle=document.getElementById('circle'), order=seatInsertion(S.players,d.id,gap), n=order.length;
+  d.gap=gap;
+  order.forEach((p,i)=>{ if(p.id!==d.id) placeSeat(circle.querySelector(`.seat[data-id="${p.id}"]`),i,n); });
+  placeSeat(circle.querySelector('.seat-gap'),gap,n);
+  const before=order[(gap-1+n)%n].name, after=order[(gap+1)%n].name;
+  circle.querySelector('.seat-drag-status').innerHTML=`<b>Move ${esc(P(d.id).name)}</b><span>Between ${esc(before)} and ${esc(after)}</span><small>${d.keyboard?'Arrows to move · Enter to place · Esc to cancel':'Release to place · Esc to cancel'}</small>`;
+}
+function pointSeatDrag(x,y){
+  if(!seatDrag) return;
+  const circle=document.getElementById('circle'), r=circle.getBoundingClientRect(), dx=x-r.left-r.width/2, dy=y-r.top-r.height/2;
+  const radius=Math.hypot(dx/(r.width/2),dy/(r.height/2));
+  seatDrag.valid=radius>=.38 && radius<=1.35 && x>=r.left-24 && x<=r.right+24 && y>=r.top-24 && y<=r.bottom+24;
+  circle.querySelector('.seat-gap').style.visibility=seatDrag.valid?'':'hidden';
+  circle.querySelector('.seat-drag-status').style.opacity=seatDrag.valid?'1':'.45';
+  if(seatDrag.valid){ const angle=(Math.atan2(dy,dx)+Math.PI/2+2*Math.PI)%(2*Math.PI); const gap=Math.round(angle/(2*Math.PI)*S.players.length)%S.players.length; if(gap!==seatDrag.gap) previewSeatGap(gap); }
+  const ghost=document.querySelector('.seat-drag-ghost'); if(ghost){ghost.style.left=x+'px';ghost.style.top=y+'px';}
+}
+function finishSeatDrag(apply){
+  if(!seatDrag) return;
+  const d=seatDrag, next=seatInsertion(S.players,d.id,d.gap), changed=next.some((p,i)=>p!==S.players[i]);
+  seatDrag=null; dragId=null; seatPress=null; clearTimeout(pressTimer);
+  document.querySelector('.seat-drag-ghost')?.remove();
+  if(apply && d.valid && changed) commit(()=>{S.players=next; ui.pop=null; ui.menu=null; log(`${P(d.id).name} moved between ${next[(d.gap-1+next.length)%next.length].name} and ${next[(d.gap+1)%next.length].name}.`);},'Moved '+P(d.id).name);
+  else render();
+  document.getElementById('circle').classList.remove('reordering');
+  document.querySelector(`.seat[data-id="${d.id}"]`)?.focus({preventScroll:true});
+}
 document.addEventListener('contextmenu', e=>{
-  const seat = e.target.closest('.seat'); if(!seat) return;
-  e.preventDefault(); ui.pop = null; ui.menu = {id:seat.dataset.id, x:e.clientX, y:e.clientY}; render();
+  const seat=e.target.closest('.seat'); if(!seat || seatDrag) return;
+  e.preventDefault(); ui.pop=null; ui.menu={id:seat.dataset.id,x:e.clientX,y:e.clientY}; render();
 });
 document.addEventListener('pointerdown', e=>{
-  const seat = e.target.closest('.seat'); if(!seat || e.pointerType==='mouse') return;
+  const seat=e.target.closest('.seat[data-id]');
+  if(!seat || e.button!==0 || ui.pick || ui.vote || seatDrag || S.players.length<2) return;
+  seatPress={id:seat.dataset.id,x:e.clientX,y:e.clientY,pointer:e.pointerId,source:seat};
+  if(e.pointerType!=='mouse') pressTimer=setTimeout(()=>{if(!seatDrag && seatPress){seatPress=null;suppressClick=true;ui.menu={id:seat.dataset.id,x:e.clientX,y:e.clientY};render();}},550);
+});
+document.addEventListener('pointermove', e=>{
+  if(!seatPress || seatPress.pointer!==e.pointerId) return;
+  if(!seatDrag && Math.hypot(e.clientX-seatPress.x,e.clientY-seatPress.y)<8) return;
+  if(!seatDrag){if(!startSeatDrag(seatPress.id)) return; seatPress.source.setPointerCapture(e.pointerId);}
+  e.preventDefault(); pointSeatDrag(e.clientX,e.clientY);
+},{passive:false});
+document.addEventListener('pointerup', e=>{
+  if(seatPress?.pointer!==e.pointerId) return;
   clearTimeout(pressTimer);
-  pressTimer = setTimeout(()=>{ suppressClick = true; ui.menu = {id:seat.dataset.id, x:e.clientX, y:e.clientY}; render(); }, 550);
+  if(seatDrag){pointSeatDrag(e.clientX,e.clientY);suppressClick=true;finishSeatDrag(true);setTimeout(()=>suppressClick=false,0);}
+  seatPress=null;
 });
-['pointerup','pointercancel','pointermove'].forEach(t=>document.addEventListener(t, e=>{ if(t!=='pointermove' || Math.abs(e.movementX)+Math.abs(e.movementY)>6) clearTimeout(pressTimer); }));
-document.addEventListener('dragstart', e=>{
-  const seat = e.target.closest('.seat'); if(!seat || ui.pick || ui.vote){ e.preventDefault(); return; }
-  dragId = seat.dataset.id; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', dragId);
-  ui.pop = null; ui.menu = null; requestAnimationFrame(()=>seat.classList.add('dragging'));
-});
+document.addEventListener('pointercancel', ()=>{clearTimeout(pressTimer);if(seatDrag) finishSeatDrag(false);seatPress=null;});
+window.addEventListener('blur',()=>{if(seatDrag) finishSeatDrag(false);seatPress=null;clearTimeout(pressTimer);});
+document.addEventListener('dragstart',e=>{if(e.target.closest('.seat'))e.preventDefault();});
 document.addEventListener('dragover', e=>{ if(!dragId && [...(e.dataTransfer?.types||[])].includes('Files')){ e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; } });
 document.addEventListener('drop', e=>{
   if(dragId || !e.dataTransfer?.files?.length) return;
@@ -2928,25 +3001,18 @@ document.addEventListener('drop', e=>{
   if(imgs.length) addTokenFiles(imgs);
   else if(json){ const fr = new FileReader(); fr.onload = ()=>openGame(fr.result); fr.readAsText(json); }
 });
-document.addEventListener('dragover', e=>{
-  const seat = e.target.closest('.seat'); if(!seat || !dragId) return;
-  e.preventDefault();
-  document.querySelectorAll('.seat.dropto').forEach(s=>s!==seat && s.classList.remove('dropto'));
-  if(seat.dataset.id!==dragId) seat.classList.add('dropto');
-});
-document.addEventListener('dragend', ()=>{ dragId = null; document.querySelectorAll('.dropto,.dragging').forEach(s=>s.classList.remove('dropto','dragging')); });
-document.addEventListener('drop', e=>{
-  const seat = e.target.closest('.seat'); if(!seat || !dragId) return;
-  e.preventDefault();
-  const from = S.players.findIndex(p=>p.id===dragId), to = S.players.findIndex(p=>p.id===seat.dataset.id);
-  dragId = null;
-  if(from<0 || to<0 || from===to) return render();
-  commit(()=>{ const [p] = S.players.splice(from,1); S.players.splice(to,0,p);
-    const n = S.players.length, i = S.players.indexOf(p);
-    log(`${p.name} moved to sit between ${S.players[(i-1+n)%n].name} and ${S.players[(i+1)%n].name}.`); });
-});
 document.addEventListener('keydown', e=>{
   if(phoneMode) return;
+  if(seatDrag){
+    if(e.key==='Escape'){e.preventDefault();finishSeatDrag(false);return;}
+    if(seatDrag.keyboard){
+      if(['ArrowRight','ArrowDown','ArrowLeft','ArrowUp'].includes(e.key)){e.preventDefault();previewSeatGap((seatDrag.gap+(['ArrowRight','ArrowDown'].includes(e.key)?1:-1)+S.players.length)%S.players.length);return;}
+      if(e.key==='Enter' || e.key===' '){e.preventDefault();finishSeatDrag(true);return;}
+      if(e.key==='Tab'){finishSeatDrag(false);return;}
+    }
+    return;
+  }
+  if(e.key===' ' && e.target.closest('.seat[data-id]') && !ui.pick && !ui.vote){e.preventDefault();startSeatDrag(e.target.closest('.seat').dataset.id,true);return;}
   const typing = e.target.closest('input,select,textarea');
   if(e.key==='Escape'){
     if(ui.gmenu) ui.gmenu = false;
@@ -2977,6 +3043,10 @@ document.addEventListener('change', e=>{
   if(fe){ const f = ui.form[fe.dataset.form] ||= {}; f[fe.dataset.field] = fe.type==='number' ? (fe.value==='' ? null : +fe.value) : fe.value; if(stepDef(fe.dataset.form)?.info) render(); return; }
   const el = e.target.closest('[data-change]'); if(!el) return;
   const k = el.dataset.change, p = el.dataset.id && P(el.dataset.id);
+  if(k==='insertseat'){
+    const target=P(el.value); if(!p || !target || p===target) return;
+    return commit(()=>{const rest=S.players.filter(q=>q!==p); S.players=seatInsertion(S.players,p.id,rest.indexOf(target)); log(`${p.name} moved to sit before ${target.name}.`);},'Moved '+p.name);
+  }
   if(k==='count') return commit(()=>resize(+el.value));
   if(k==='bluff') return commit(()=>{ const b = [...S.bluffs]; b[+el.dataset.i] = el.value || null; S.bluffs = b.filter(Boolean); if(S.stage==='game') log(`Demon bluffs are now: ${S.bluffs.map(x=>R[x].name).join(', ') || 'none'}.`); });
   if(k==='names') return commit(()=>{
