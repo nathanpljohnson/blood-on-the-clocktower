@@ -735,7 +735,7 @@ const STEP = {
   chambermaid:{how:'Wake the Chambermaid, click the 2 players they point at, then show the number.',choose:'Choose 2 living players',pick:'chambermaid',n:2,rule:{alive:1,notSelf:1},info:'number',label:'How many of them woke tonight'},
   mathematician:{how:'Wake them and show how many players got wrong results since dawn because of another character (drunk, poisoned, or given false info).',info:'number',label:'Abilities that went wrong'},
   'leviathan@1':{title:'Leviathan',how:'After everyone wakes, announce that the Leviathan is in play.',deadOk:1,cards:()=>[{label:'Show everyone',card:{eyebrow:'The Demon in play is the',icon:'leviathan',big:'Leviathan',sub:'If more than 1 good player is executed, evil wins. After day 5, evil wins.',tone:'evil'}}]},
-  leviathan:{title:'Leviathan',how:()=>`Tomorrow is day ${S.phase.n}. You may remind everyone the Leviathan is in play. Good players executed so far: ${S.goodExecs||0} (2 means evil wins). ${S.phase.n>=5?'This is the last day: after it, evil wins.':''}`},
+  leviathan:{title:'Leviathan',how:()=>`The Leviathan does not wake to choose victims and does not kill at night. Tomorrow is day ${S.phase.n}. You may remind everyone the Leviathan is in play. Good players executed so far: ${S.goodExecs||0} (2 means evil wins). ${S.phase.n>=5?'This is the last day: after it, evil wins.':''}`},
   innkeeper:{how:'Wake the Innkeeper, show the screen, and click the 2 players they point at. Both are safe tonight. Then click which one is drunk.',choose:'Choose 2 players',pick:'innkeeper',n:2},
   gambler:{how:'Wake the Gambler. Pick the character they guess below, then click the player they point at. If the guess is wrong, the Gambler dies.',choose:'Choose a player and guess their character',char:'script',pick:'gambler'},
   pithag:{how:'Wake the Pit-Hag. Pick the character they point at below, then click the player. If that character is not in play, the player becomes it: wake them and show them their new character.',choose:'Choose a player and a character',char:'script',pick:'pithag'},
@@ -767,7 +767,22 @@ const STEP = {
   king:{how:'The dead equal or outnumber the living. Wake the King and show them 1 living character.',info:'character',label:'A living player is the',pool:'living',need:()=>S.players.filter(p=>!p.alive).length>=alive().length?null:'More players are alive than dead'},
   gatekeeper:{how:'Wake them and show 1 character that is not in play.',info:'character',label:'This character is not in play',pool:'notinplay'}
 };
-const stepDef = k => (S.phase.n===1 && STEP[k+'@1']) || STEP[k];
+// A Lunatic follows the Demon they were shown, never a generic nightly kill.
+function stepDef(k){
+  const st = (S.phase.n===1 && STEP[k+'@1']) || STEP[k];
+  if(k!=='lunatic') return st;
+  const a = actorsFor('lunatic').find(p=>p.alive) || actorsFor('lunatic')[0];
+  const shown = a?.shown, action = shown && (S.phase.n===1 ? shown==='pukka' : !['leviathan','legion'].includes(shown));
+  const choiceCards = p => S.picked?.lunatic ? demonCards("the Lunatic's choice", ()=>({eyebrow:`The Lunatic (${p.name}) chose`,big:S.picked.lunatic,tone:'evil'})) : [];
+  const how = p => `Wake the Lunatic as if they were the ${R[p.shown]?.name||'Demon'}. Show the screen and record their choice. Their choice has no effect. Then show the real Demon who they chose.`;
+  if(S.phase.n===1) return {...st,
+    how:p=>`The Lunatic thinks they are the ${R[p.shown]?.name||'Demon'}. ${evilInfo()?'Wake them and show their fake Demon information. ':''}${action?'Wake them as the Pukka and record who they choose to poison; this poisons nobody. ':''}Then wake the real Demon and show who the Lunatic is${action?' and who they chose':''}.`,
+    ...(action ? {choose:demonChoose(shown),pick:'lunatic',optional:0} : {}),
+    cards:p=>[...st.cards(p),...choiceCards(p)]};
+  if(!action) return {how:`The Lunatic thinks they are the ${R[shown]?.name||'Demon'}, which does not choose a nightly attack. Do not ask them to choose a victim.`};
+  return {...st,how,choose:demonChoose(shown),n:shown==='alhadikhia'?3:1,
+    need:()=>shown==='zombuul' && S.lastDay?.died ? 'Someone died today' : null};
+}
 const stepTitle = k => STEP[k]?.title || STEP[k+'@1']?.title || R[k]?.name || k;
 const REM = {
   poisoned:{label:'Poisoned',expires:'dusk',cls:'poison',bad:1},
@@ -1008,7 +1023,7 @@ const why = p => p.role==='drunk' ? 'This is the Drunk' : p.role==='marionette' 
 const inPlay = k => S.players.some(p=>p.role===k || wake(p)===k);
 const sober = k => S.players.find(p=>p.alive && abilityOf(p)===k && !impaired(p));
 const evilInfo = () => S.players.length>=7 || hasFabled('toymaker');
-const demonChoose = k => k==='pukka' ? 'Choose a player to poison' : k==='alhadikhia' ? 'Choose 3 players' : 'Choose a player to kill';
+const demonChoose = k => ['leviathan','legion'].includes(k) ? null : k==='pukka' ? 'Choose a player to poison' : k==='alhadikhia' ? 'Choose 3 players' : 'Choose a player to kill';
 const alignNote = p => p.align && p.align!==(['minion','demon'].includes(team(p))?'evil':'good') ? ` (${p.align})` : '';
 const roleLabel = p => !p.role ? 'No character' : (THINKS.includes(p.role) ? `${R[p.role].name}, thinks ${R[p.shown]?.name||'?'}` : p.as && p.as!==p.role ? `${R[p.role].name}, has the ${R[p.as]?.name||'?'} ability` : R[p.role].name) + alignNote(p);
 const names = list => list.length ? list.map(p=>`<b>${esc(p.name)}</b> (${esc(roleLabel(p))})`).join(', ') : 'none';
@@ -1342,7 +1357,7 @@ function steps(){
     if(!skip && st.need) skip = st.need(actors[0], actors);
     if(!skip && KILLERS.concat(['pukka','alhadikhia']).includes(k)){
       if(S.night?.exo && actors.some(p=>p.id===S.night.exo)) skip = 'The Exorcist chose them';
-      else if(S.night?.lyc && k!=='pukka') skip = 'The Lycanthrope killed tonight';
+      // A Lycanthrope kill prevents deaths, not the Demon's wake or choice.
     }
     out.push({k,actors,skip});
   }
@@ -1364,7 +1379,7 @@ function truthFor(k,a){
     case 'oracle': return ps.filter(p=>!p.alive && regEvil(p)).length;
     case 'clockmaker': { const n = ps.length, ds = ps.filter(isDemon), ms = ps.filter(p=>team(p)==='minion'); let best = 0;
       ds.forEach(d=>ms.forEach(m=>{ const x = Math.abs(ps.indexOf(d)-ps.indexOf(m)), s = Math.min(x, n-x); if(!best || s<best) best = s; })); return best; }
-    case 'chambermaid': { const ch = (S.pickedIds?.chambermaid||[]).map(P).filter(Boolean); const woke = steps().filter(s=>!s.skip && s.k!=='chambermaid' && STEP[s.k] && !['minioninfo','demoninfo','king','marionette','barber'].includes(s.k));
+    case 'chambermaid': { const ch = (S.pickedIds?.chambermaid||[]).map(P).filter(Boolean); const woke = steps().filter(s=>!s.skip && s.k!=='chambermaid' && STEP[s.k] && !['minioninfo','demoninfo','marionette','barber','leviathan','legion','sweetheart','farmer','tinker'].includes(s.k) && !(s.k==='king' && S.phase.n===1) && !(s.k==='lunatic' && !stepDef('lunatic').pick && !(S.phase.n===1 && evilInfo())));
       return ch.filter(p=>woke.some(s=>s.actors.includes(p))).length; }
     case 'mathematician': return S.players.filter(p=>p.alive && impaired(p) && steps().some(s=>!s.skip && s.actors.includes(p))).length;
   }
@@ -1706,6 +1721,8 @@ function spare(a, t, reason, cause){
   return false;
 }
 function demonHit(a, t){
+  if(S.night?.lyc) return log('The Lycanthrope already killed tonight, so the Demon kills nobody.'), false;
+  if(a?.role==='leviathan') return log('The Leviathan does not kill at night.'), false;
   if(!t.alive) return log(`${t.name} is already dead, so nobody dies.`), false;
   const s = safeFrom(t,true); if(s) return spare(a, t, `${t.name} ${s}`);
   if(abilityOf(t)==='mayor' && !impaired(t)){ ui.pick = {kind:'mayor',actor:a.id,target:t.id}; log('The Demon chose the Mayor. You decide who dies.'); return false; }
@@ -1719,6 +1736,7 @@ function demonKill(a, t, ruled){
 }
 function demonAttack(a, t){
   const k = a.role;
+  if(!KILLERS.includes(k)) return log(`The ${R[k]?.name||'Demon'} has no single-target nightly attack.`);
   if(impaired(a)) return spare(a, t, `The ${R[k].name} is drunk or poisoned`);
   if(S.night.lyc) return spare(a, t, 'The Lycanthrope already killed tonight');
   if(k==='imp' && t===a){ S.done.imp = true; return kill(a,'star-pass'); }
@@ -1736,7 +1754,7 @@ function demonAttack(a, t){
 function act(kind, a, ts, pk){
   const [t, u, w] = ts, sob = a ? !impaired(a) : true;
   switch(kind){
-    case 'poisoner': dropRem('poisoned'); addRem(t,'poisoned'); log(`Poisoner ${a.name} poisoned ${t.name} (until tomorrow's dusk).`); break;
+    case 'poisoner': dropRem('poisoned'); if(sob) addRem(t,'poisoned'); log(`Poisoner ${a.name} chose ${t.name}${sob?' (poisoned until tomorrow’s dusk)':' (no effect: drunk or poisoned)'}.`); break;
     case 'monk':
       if(!sob){ addRem(t,'safe',{label:'Safe (no effect)',off:true}); log(`Monk ${a.name} picked ${t.name}, but the Monk is ${why(a).toLowerCase().replace('this is ','')}, so it does nothing.`); }
       else { addRem(t,'safe'); log(`Monk ${a.name} protected ${t.name} tonight.`); }
@@ -1780,7 +1798,7 @@ function act(kind, a, ts, pk){
       if(!a.alive){ log(`The Pukka died, so ${t.name} is not poisoned.`); break; }
       addRem(t,'pukka'); log(`Pukka ${a.name} poisoned ${t.name}. They die tomorrow night.`);
       break; }
-    case 'lunatic': log(`Lunatic ${a.name} chose ${t.name}. Nothing happens. Show the Demon.`); break;
+    case 'lunatic': log(`Lunatic ${a.name} chose ${ts.map(q=>q.name).join(' and ')}. Nothing happens. Show the Demon.`); break;
     case 'widow':
       dropRem('widowpoison'); if(sob) addRem(t,'widowpoison');
       log(`Widow ${a.name} poisoned ${t.name}${sob?'':' (no effect: the Widow is drunk or poisoned)'}.`);
