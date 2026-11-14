@@ -1113,10 +1113,10 @@ function runOpt(o){
   }
 }
 function commit(fn, label){
-  const snap = JSON.stringify(S), top = S.log[0], rulings = [...(ui.rulings||[])]; fn();
+  const snap = JSON.stringify(S), top = S.log[0], rulings = [...(ui.rulings||[])], pick = ui.pick; fn();
   if(!ui.pick && S.stage==='game' && S.phase.kind==='day' && S.pending?.length){ const nx = S.pending.shift(); if(P(nx.actor)) ui.pick = nx; }
   const changed = S.log[0] && S.log[0]!==top;
-  undo.push({s:snap, what: changed ? S.log[0].t : (label || 'the last change'), rulings}); if(undo.length>100) undo.shift();
+  undo.push({s:snap, what: changed ? S.log[0].t : (label || 'the last change'), rulings, pick}); if(undo.length>100) undo.shift();
   if(changed && !ui.msg) ui.msg = S.log[0].t;
   save(); render();
 }
@@ -1230,7 +1230,7 @@ function endAbility(p){
   if(k==='witch') stop('cursed',"The Witch's curse");
   if(k==='vigormortis'){ stop('vigorpoison',"The Vigormortis poison"); dropRem('undead'); }
 }
-function kill(p,cause,force){
+function kill(p,cause,force,deferWin=false){
   if(!p.alive) return false;
   const extraLife = p.rem.find(r=>r.type==='wizardlife' && !r.off);
   if(extraLife && !force){
@@ -1238,7 +1238,7 @@ function kill(p,cause,force){
     log(`${p.name} would have died (${cause}), but used an extra life.`);
     return false;
   }
-  if(abilityOf(p)==='fool' && !impaired(p) && !has(p,'noability') && !force){ const pid = p.id; addRem(p,'noability');
+  if(hasAbility(p,'fool') && !impaired(p) && !has(p,'noability') && !force){ const pid = p.id; addRem(p,'noability');
     propose(`${p.name} is the Fool and this is their first death (${cause}), so they should survive.`, [
       {label:'They survive', run:['log', `${p.name} would have died (${cause}), but the Fool survives the first time.`]},
       {label:'They die anyway', run:['kill', pid, cause+', your call']}]);
@@ -1257,14 +1257,16 @@ function kill(p,cause,force){
   if(hasAbility(p,'barber')) S.haircut = true;
   if(has(p,'pixiemad') && S.players.some(q=>q.alive && abilityOf(q)==='pixie')) log(`If the Pixie was "mad" about being the ${R[p.role].name}, they now have that ability. Set it on the Pixie's notes.`);
   for(const k of ['klutz','moonchild']) if(hasAbility(p,k) && !impaired(p)){
-    if(day){ ui.pick = {kind:k, actor:p.id}; } else (S.pending ||= []).push({kind:k, actor:p.id});
+    const pick={kind:k,actor:p.id};
+    if(day && !ui.pick) ui.pick=pick;
+    else (S.pending ||= []).push(pick);
   }
   if(isDemon(p) && !alive().some(isDemon)){
-    const sw = S.players.find(q=>q.alive && abilityOf(q)==='scarletwoman' && !impaired(q));
+    const sw = S.players.find(q=>q.alive && hasAbility(q,'scarletwoman') && !impaired(q));
     if(sw && before>=5){ sw.role = p.role; sw.as = null; sw.align = 'evil'; addRem(sw,'becameimp'); log(`${sw.name} (Scarlet Woman) becomes the ${R[p.role].name}. Wake them tonight to tell them.`); }
     else if(cause==='star-pass' && alive().some(q=>team(q)==='minion')){ ui.pick={kind:'starpass',actor:p.id}; return true; }
   }
-  checkWin();
+  if(!deferWin) checkWin();
   return true;
 }
 function revivePlayer(p){
@@ -1283,7 +1285,7 @@ function setWinner(t){ if(S.winner) return; S.winner = t; log(t); say(t);
   S.players.filter(p=>hasAbility(p,'politician')).forEach(p=>log(`${p.name} is the Politician: if they were most responsible for their team losing, they switch sides and win.`));
   archiveGame(); }
 function checkWin(){
-  if(S.winner) return;
+  if(S.winner || ui.pick?.kind==='starpass') return;
   const a = alive();
   if(!a.some(isDemon)){
     const et = a.find(p=>p.role==='eviltwin' && !impaired(p)), gt = a.find(p=>has(p,'twin'));
@@ -1304,17 +1306,17 @@ function execute(p){
   delete d.tieFavor;
   (d.executions ||= []).push(p.id);
   if(d.extraExecution){ d.extraExecution = false; d.usedExtra = true; }
-  wizardTrigger('execution');
   addRem(p,'executed');
   log(`${p.name} is executed.`);
   S.news = `${p.name} was executed.`;
   say(`${p.name} has been executed.`);
-  if(hasAbility(p,'saint') && !impaired(p)){ if(p.alive) wizardTrigger('death',p.id); p.alive=false; setWinner('Evil wins! The Saint was executed.'); return; }
+  if((p.alive || retainedAbility(p)) && hasAbility(p,'saint') && !impaired(p)){ wizardTrigger('execution'); if(p.alive) wizardTrigger('death',p.id); p.alive=false; setWinner('Evil wins! The Saint was executed.'); return; }
   if(has(p,'twin') && S.players.some(q=>q.alive && q.role==='eviltwin' && !impaired(q))){ setWinner('Evil wins! The good twin was executed.'); }
   if(p.role==='goblin' && has(p,'claimed') && !impaired(p)) setWinner('Evil wins! The Goblin claimed and was executed.');
   if(!isEvil(p) && levActive()){ S.goodExecs = (S.goodExecs||0)+1; log(`Good players executed while the Leviathan lives: ${S.goodExecs}.`); if(S.goodExecs>1) setWinner('Evil wins! More than 1 good player was executed (Leviathan).'); }
-  if(abilityOf(p)==='psychopath' && !impaired(p)){ d.rosh = p.id; log(`${p.name} is the Psychopath: they play roshambo with the person who nominated them, and only die if they lose.`); return; }
+  if(p.alive && hasAbility(p,'psychopath') && !impaired(p)){ d.rosh = p.id; log(`${p.name} is the Psychopath: they play roshambo with the person who nominated them, and only die if they lose.`); return; }
   const died = kill(p,'executed');
+  if(!ui.rulings?.some(r=>r.opts.some(o=>o.run[0]==='kill' && o.run[1]===p.id))) wizardTrigger('execution');
   if(died) minstrel(p);
   const can = S.players.find(q=>q.alive && q.role==='cannibal');
   if(died && can && can!==p){
@@ -2492,13 +2494,14 @@ function wizardException({rule,target,purpose}){
   const d=S.day;
   if(night() || !d || S.winner) return 'Day rulings are available during an active day.';
   if(rule==='tie' && !P(target)) return 'Choose a player to favor in a tie.';
-  if(rule==='extra' && (!d.executed || d.usedExtra || d.rosh)) return 'Allow a second execution after the first execution resolves.';
+  if(rule==='extra' && (!d.executed || d.usedExtra || (d.rosh && P(d.rosh)?.alive) || ui.rulings?.length)) return 'Allow a second execution after the first execution resolves.';
   if(!['bypass','tie','extra','clear'].includes(rule)) return 'Choose a day ruling.';
   commit(()=>{
     if(rule==='bypass') d.bypassNext=true;
     if(rule==='tie') d.tieFavor=target;
     if(rule==='extra'){
       d.extraExecution=true;
+      delete d.rosh;
       d.executions ||= [d.executed];
       d.executed=null;
       d.noms.forEach(x=>x.closed=true);
@@ -2634,9 +2637,9 @@ function applyWizardEffects(effects){
       record(e,`added a reminder to ${p.name}.`);
     }
   }
-  for(const e of deaths) kill(P(e.target),e.purpose==='price'?'Wizard price':'Wizard effect',true);
+  for(const e of deaths) kill(P(e.target),e.purpose==='price'?'Wizard price':'Wizard effect',true,true);
   for(const e of effects.filter(e=>e.rule)) changeWizardVoting(e);
-  if(wasDemon && !S.players.some(p=>p.alive && isDemon(p))) checkWin();
+  if(deaths.length || (wasDemon && !S.players.some(p=>p.alive && isDemon(p)))) checkWin();
 }
 
 function wizardVotingError({target,rule,count,expires},town=false){
@@ -3234,7 +3237,12 @@ document.addEventListener('click', e=>{
       return commit(()=>{ S.done[k] = true; ui.open = null; }, `${stepTitle(k)} marked done`);
     }
     case 'rule': { const r = (ui.rulings||[]).find(x=>x.id===el.dataset.id), o = r?.opts[+el.dataset.i]; if(!o) return;
-      return commit(()=>{ ui.rulings = ui.rulings.filter(x=>x!==r); runOpt(o); checkWin(); }, o.label); }
+      return commit(()=>{
+        ui.rulings = ui.rulings.filter(x=>x!==r);
+        runOpt(o);
+        if(!night() && S.day?.executed && r.opts.some(opt=>opt.run[0]==='kill' && opt.run[1]===S.day.executed && opt.run[2]?.startsWith('executed'))) wizardTrigger('execution');
+        checkWin();
+      },o.label); }
     case 'advance': if(ui.rulings?.length){ ui.msg = 'Make your call in the gold box at the top first.'; return render(); }
       if(S.phase.kind==='night'){
         if(currentStep(steps()) && !ui.confirmSkip){ ui.confirmSkip = true; ui.msg = 'Some characters have not had their turn yet. Press again to start the day anyway.'; return render(); }
@@ -3319,13 +3327,13 @@ document.addEventListener('click', e=>{
         dying.forEach(q=>demonHit(a||q,q)); }); }
     case 'tinkerdie': if(!p?.alive || impaired(p) || !hasAbility(p,'tinker')) return; return commit(()=>kill(p,'the Tinker died'));
     case 'moonkill': return commit(()=>{ p.rem = p.rem.filter(r=>r.type!=='moon'); if(!isEvil(p)) nightKill(p,'chosen by the Moonchild'); else log(`${p.name} is evil, so the Moonchild's choice does nothing.`); S.done.moonchild = true; });
-    case 'rosh': { const q = P(S.day.rosh); return commit(()=>{ S.day.rosh = null; if(el.dataset.v==='lose'){ log(`${q.name} lost roshambo.`); if(kill(q,'executed')) minstrel(q); } else log(`${q.name} won roshambo and lives.`); }); }
+    case 'rosh': { const q = P(S.day?.rosh); if(!q) return; return commit(()=>{ S.day.rosh = null; wizardTrigger('execution'); if(el.dataset.v==='lose'){ log(`${q.name} lost roshambo.`); if(kill(q,'executed')) minstrel(q); } else log(`${q.name} won roshambo and lives.`); }); }
     case 'usedonce': return commit(()=>{ addRem(p,'noability'); log(`${p.name} used their ${R[wake(p)].name} ability.`); });
     case 'undo': {
       if(!undo.length) return;
       const u = undo[undo.length-1], prev = JSON.parse(u.s);
       if(S.stage==='game' && prev.stage!=='game'){ ui.msg = "The game has started, so Undo stops here. Use New game to go back to setup."; return render(); }
-      undo.pop(); S = prev; ui.rulings = u.rulings || []; ui.pick=null; ui.vote=null; ui.recap=null; ui.pop=null; ui.show=null; ui.msg = `Undid: ${u.what}`; ensureConsistent(); save(); return render();
+      undo.pop(); S = prev; ui.rulings = u.rulings || []; ui.pick=['klutz','moonchild','starpass','mayor'].includes(u.pick?.kind)?u.pick:null; ui.vote=null; ui.recap=null; ui.pop=null; ui.show=null; ui.msg = `Undid: ${u.what}`; ensureConsistent(); save(); return render();
     }
     case 'newgame':
       if(!ui.confirmNew){ ui.confirmNew = true; return render(); }
