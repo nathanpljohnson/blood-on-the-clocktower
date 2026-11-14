@@ -117,6 +117,14 @@ p{margin:0 0 8px}
 .muted{color:var(--muted)}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .col{display:flex;flex-direction:column;gap:8px}
+.wizard-tools form{display:grid;gap:8px;border-top:1px solid var(--line);padding-block:12px}
+.wizard-tools :is(input,select,textarea){font-size:1rem}
+.wizard-tools form h3,.wizard-tools .warn{margin:0}
+.wizard-tools form .btn{justify-self:start}
+.wizard-tools :is(.btn,input,select){min-height:44px}
+.wizard-tools select,.wizard-tools textarea{width:100%;min-width:0}
+.wizard-tools textarea{resize:vertical}
+.wizard-tools li,.wizard-tools p{overflow-wrap:anywhere}
 label.f{display:flex;flex-direction:column;gap:4px;font-size:.8rem;color:var(--muted);min-width:0}
 select,input[type=text],input[type=number],textarea{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 8px;max-width:100%}
 input[type=number]{width:5em}
@@ -198,6 +206,7 @@ textarea{width:100%;min-height:150px;resize:vertical}
 .show .slist{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
 .show .slist span{font:400 clamp(1.4rem,5vw,2.4rem) var(--display);border:1px solid var(--line);border-radius:12px;padding:6px 16px;background:#0005}
 .show .ssub{max-width:36ch;font-size:clamp(1rem,3vw,1.3rem);color:var(--ink);opacity:.85}
+.show.wizard-clue .ssub{overflow-wrap:anywhere;white-space:pre-wrap;max-height:65dvh;overflow:auto;font-size:clamp(1rem,4vw,1.75rem)}
 .show .foot{font-weight:700;letter-spacing:.12em;text-transform:uppercase}
 .show.good .foot{color:var(--town)}.show.evil .foot{color:#ff8a80}
 .mode{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-bottom:12px}
@@ -720,7 +729,7 @@ const STEP = {
   marionette:{title:'Marionette',how:'Wake the Demon and show them who the Marionette is. The Marionette does not wake for this.',cards:()=>{ const m = S.players.find(p=>p.role==='marionette'); return demonCards('who the Marionette is', ()=>({eyebrow:'This player is your Marionette',icon:'marionette',big:nm(m),tone:'evil'})); }},
   widow:{how:'Wake the Widow and let them look at the grimoire. Click who they point at: that player is poisoned. Then click a good player, wake them and show them that a Widow is in play.',choose:'Choose a player to poison',pick:'widow',
     cards:()=>{ const k = S.players.find(p=>has(p,'know')); return k ? [{label:`Show ${k.name} "a Widow is in play"`,card:{eyebrow:'This character is in play',icon:'widow',big:'Widow',tone:'good'}}] : []; }},
-  wizard:{how:'If the Wizard made a wish, do whatever it needs tonight. You decide if it is granted and what it costs. Otherwise just press Done.',optional:1},
+  wizard:{how:'If they make a wish, open Wizard to record your ruling. Otherwise press Done.',optional:1},
   snakecharmer:{how:'Wake the Snake Charmer. Show the screen, then click who they point at. If it is the Demon, they swap characters: show both players their new character below.',choose:'Choose a living player',pick:'snakecharmer',rule:{alive:1}},
   'godfather@1':{how:'Wake the Godfather and show which Outsiders are in play.',cards:()=>{ const os = [...new Set(S.players.filter(p=>team(p)==='outsider').map(p=>p.role))];
     return [{label:'Show the Outsiders in play',card: os.length ? {eyebrow:'Outsiders in play',icons:os,list:os.map(k=>R[k].name),tone:'evil'} : {eyebrow:'Outsiders in play',big:'None',tone:'evil'}}]; }},
@@ -794,6 +803,7 @@ function stepDef(k){
 }
 const stepTitle = k => STEP[k]?.title || STEP[k+'@1']?.title || R[k]?.name || k;
 const REM = {
+  wizardpoison:{label:'Poisoned (Wizard)',expires:'never',cls:'poison',bad:1},
   poisoned:{label:'Poisoned',expires:'dusk',cls:'poison',bad:1},
   pukka:{label:'Poisoned (Pukka)',expires:'never',cls:'poison',bad:1},
   snakepoison:{label:'Poisoned (Snake Charmer)',expires:'never',cls:'poison',bad:1},
@@ -1028,6 +1038,10 @@ function townNeighbours(p){
 const ndPoisoned = p => S.players.some(d=>d.role==='nodashii' && d.alive && d!==p && townNeighbours(d).includes(p) && !rawImpaired(d));
 const rawImpaired = p => ['drunk','marionette'].includes(p.role) || p.rem.some(r=>!r.off && REM[r.type]?.bad);
 const impaired = p => rawImpaired(p) || ndPoisoned(p);
+const wizardHolders = () => S.players.filter(p=>p.role==='wizard' || (p.as==='wizard' && !['drunk','marionette','lunatic'].includes(p.role)));
+const canWish = p => wizardHolders().includes(p) && ((p.alive && !p.fake) || has(p,'undead')) && !impaired(p) && !has(p,'noability')
+  && !S.wishes?.some(w=>w.actor===p.id && w.spent);
+const wizardMode = () => S.stage==='game' && (wizardHolders().length>0 || !!S.wishes?.some(w=>w.ruling==='granted'));
 const why = p => p.role==='drunk' ? 'This is the Drunk' : p.role==='marionette' ? 'This is the Marionette' : p.rem.some(r=>!r.off && r.type==='drunk') ? 'They are drunk' : 'They are poisoned';
 const inPlay = k => S.players.some(p=>p.role===k || wake(p)===k);
 const sober = k => S.players.find(p=>p.alive && abilityOf(p)===k && !impaired(p));
@@ -1226,6 +1240,11 @@ function kill(p,cause,force){
   checkWin();
   return true;
 }
+function revivePlayer(p){
+  p.alive = true; p.fake = false; p.ghost = true;
+  p.rem = p.rem.filter(r=>!['diedtonight','zombfirst','undead','bydemon'].includes(r.type));
+}
+
 function ensureConsistent(){
   if(S.stage!=='game' || S.winner || ui.pick?.kind==='starpass') return;
   if(alive().some(isDemon)) return;
@@ -1344,6 +1363,7 @@ function timerHTML(){
 
 function actorsFor(k){
   const ps = S.players;
+  if(k==='wizard') return wizardHolders().filter(canWish);
   if(k==='minioninfo') return ps.filter(p=>team(p)==='minion' && p.role!=='marionette');
   if(k==='demoninfo') return ps.filter(isDemon);
   if(k==='newimp') return ps.filter(p=>has(p,'becameimp'));
@@ -1710,7 +1730,7 @@ function record(kind, ts){
     (S.pickedIds ||= {})[kind] = ts.map(q=>q.id);
   }
 }
-function changed(p, k){ (S.night.changed ||= []).push({id:p.id, step:k}); if(p.fake && p.role!=='zombuul'){ p.fake = false; p.alive = false; log(`${p.name} only seemed dead as the Zombuul, so now they are really dead.`); } }
+function changed(p, k){ ((S.night ||= {}).changed ||= []).push({id:p.id, step:k}); if(p.fake && p.role!=='zombuul'){ p.fake = false; p.alive = false; log(`${p.name} only seemed dead as the Zombuul, so now they are really dead.`); } }
 function safeFrom(t, demon){
   if(has(t,'innsafe')) return 'is safe (Innkeeper)';
   if(demon && has(t,'safe')) return 'is protected by the Monk';
@@ -1869,7 +1889,7 @@ function act(kind, a, ts, pk){
       break; }
     case 'sweetheart': (S.flags ||= {}).sweet = true; addRem(t,'drunk',{label:'Drunk (Sweetheart)'}); log(`${t.name} is drunk for the rest of the game (Sweetheart).`); break;
     case 'professor': addRem(a,'noability');
-      if(sob && team(t)==='townsfolk'){ t.alive = true; t.ghost = true; t.rem = t.rem.filter(r=>r.type!=='diedtonight'); log(`Professor ${a.name} brings ${t.name} back to life.`); }
+      if(sob && team(t)==='townsfolk'){ revivePlayer(t); log(`Professor ${a.name} brings ${t.name} back to life.`); }
       else log(`Professor ${a.name} chose ${t.name}. ${team(t)!=='townsfolk'?'Not a Townsfolk':'Drunk or poisoned'}: nothing happens.`); break;
     case 'farmer': t.align = 'good'; t.role = 'farmer'; t.as = null; changed(t,'farmer'); log(`${t.name} becomes a Farmer.`); break;
   }
@@ -2161,6 +2181,7 @@ function stepBody(s){
   const st = stepDef(s.k), a = stepActor(s);
   const how = typeof st.how==='function' ? st.how(a) : st.how;
   const parts = [`<div class="how">${esc(how)}</div>`];
+  if(s.k==='wizard') parts.push('<button class="btn small" data-act="tab" data-k="wizard">Open Wizard</button>');
   const imp = s.actors.some(impaired) && !['minioninfo','demoninfo','newimp','king','marionette','leviathan','barber','sage','banshee','choirboy','farmer','moonchild','sweetheart'].includes(s.k) && !(S.phase.n===1 && s.k==='eviltwin');
   if(imp) parts.push(`<div class="warn">${why(s.actors.find(impaired))}: their ability does nothing. Show them anything you like.</div>`);
   if(team(a)==='townsfolk' && st.info && S.players.some(p=>p.alive && p.role==='vortox' && !impaired(p))) parts.push('<div class="warn">The Vortox is alive: Townsfolk must get FALSE information. Show something untrue.</div>');
@@ -2315,7 +2336,7 @@ function dayHTML(){
   if(d.rosh && P(d.rosh)?.alive) parts.push(`<h3>Roshambo</h3><p class="muted">${esc(P(d.rosh).name)} (Psychopath) plays rock-paper-scissors with their nominator.</p><div class="row"><button class="btn danger" data-act="rosh" data-v="lose">${ic('cross')}They lost: they die</button><button class="btn" data-act="rosh" data-v="win">They won: they live</button></div>`);
   const mads = S.players.filter(p=>p.rem.some(r=>['cmad','hmad','cursed','claimed'].includes(r.type)));
   if(mads.length) parts.push(`<h3>Watch today</h3><ul class="recapl">${mads.map(p=>`<li>${esc(p.name)}: ${p.rem.filter(r=>['cmad','hmad','cursed','claimed'].includes(r.type)).map(r=>esc(r.label)).join(', ')}</li>`).join('')}</ul>${mads.some(p=>has(p,'cmad'))?'<p class="muted">Cerenovus: if they don\'t act mad, you may execute them (Execute someone). Nobody has to vote.</p>':''}${mads.some(p=>has(p,'hmad'))?'<p class="muted">Harpy: if they don\'t act mad, you may kill them, the 2nd player, or both (Mark dead on their seat).</p>':''}`);
-  const dayAb = S.players.filter(p=>p.alive && R[wake(p)]?.day && !(R[wake(p)].once && has(p,'noability')) && !(wake(p)==='juggler' && S.phase.n>1));
+  const dayAb = S.players.filter(p=>p.alive && wake(p)!=='wizard' && R[wake(p)]?.day && !(R[wake(p)].once && has(p,'noability')) && !(wake(p)==='juggler' && S.phase.n>1));
   if(dayAb.length) parts.push(`<h3>Day abilities</h3><ul class="recapl">${dayAb.map(p=>`<li>${esc(p.name)} (${R[wake(p)].name}) ${esc(R[wake(p)].day)}${R[wake(p)].once?` <button class="btn small" data-act="usedonce" data-id="${p.id}">Mark used</button>`:''}${wake(p)==='goblin'&&!has(p,'claimed')?` <button class="btn small" data-act="addrem" data-id="${p.id}" data-type="claimed">They claimed Goblin</button>`:''}${wake(p)==='savant'?` <button class="btn small" data-act="savant" data-id="${p.id}">${ui.savant?.id===p.id?'Another pair':'Suggest 2 statements'}</button>`:''}${ui.savant?.id===p.id?savantHTML():''}</li>`).join('')}</ul>`);
   parts.push(`<h3>True and false statements</h3>${ui.stmts ? stmtHTML() : `<div class="row"><button class="btn small" data-act="stmts">${ic('book')}Ideas for the Savant, Artist or anyone</button></div>`}`);
   if(S.players.some(p=>p.role==='leviathan' && p.alive)) parts.push(`<p class="warn">Leviathan: ${S.goodExecs||0} good player${S.goodExecs===1?'':'s'} executed (2 means evil wins). ${S.phase.n>=5?'This is day 5: evil wins tonight unless the Leviathan dies.':`Evil wins after day 5 (this is day ${S.phase.n}).`}</p>`);
@@ -2337,6 +2358,94 @@ function savantHTML(){
     <div class="row"><button class="btn small primary" data-act="savantshow">${ic('eye')}Show the Savant</button><button class="btn small" data-act="savant" data-id="${v.id}">Try another pair</button><button class="btn small" data-act="stmtsfor" data-id="${v.id}">More ideas</button><button class="btn small" data-act="savantclear">Close</button></div>
     <div class="muted" style="font-size:.8rem">Suggestions only. You can say anything you like.</div></div>`;
 }
+function wizardHTML(){
+  const holders = wizardHolders(), available = holders.filter(canWish);
+  const wishes = S.wishes || [];
+  const logHTML = [...wishes].reverse().map(w=>`<li><b>${esc(P(w.actor)?.name || 'Wizard')} · ${esc(w.at)} · ${esc(w.ruling==='granted'?'Granted':w.spent?'Declined · wish spent':'Declined · may retry')}</b>
+    <div>${esc(w.wish)}</div>${w.price?`<div>Price · ${esc(w.price)}</div>`:''}${w.clue?`<div>Clue · ${esc(w.clue)}</div><button class="btn small" data-act="wizardclue" data-id="${esc(w.id)}">${ic('eye')}Show clue</button>`:''}</li>`).join('');
+  return `<section class="wizard-tools" aria-labelledby="wizard-title">
+    <h2 id="wizard-title" tabindex="-1">Wizard</h2>
+    <p class="muted">Storyteller only. Apply wish effects and prices when they take effect.</p>
+    ${available.length ? `<form id="wizardWish">
+      <h3>Record a wish</h3>
+      <label class="f">Wizard<select name="actor">${available.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('')}</select></label>
+      <label class="f">Wish<textarea name="wish" required maxlength="1000" rows="2"></textarea></label>
+      <label class="f">Ruling<select name="ruling" required><option value="">Choose a ruling…</option><option value="granted">Grant the wish</option><option value="retry">Decline and let them wish again</option><option value="spent">Decline and spend the wish</option></select></label>
+      <label class="f">Price (optional)<textarea name="price" maxlength="1000" rows="2"></textarea></label>
+      <label class="f">Public clue (optional)<textarea name="clue" maxlength="500" rows="2"></textarea></label>
+      <button class="btn small primary">Record wish</button><p class="warn" data-wizard-error role="alert" hidden></p>
+    </form>` : '<p class="muted">No Wizard can make a wish right now.</p>'}
+    <form id="wizardEffect">
+      <h3>Apply an effect</h3>
+      <label class="f">Player<select name="target" required><option value="">Choose a player…</option>${S.players.map(p=>`<option value="${esc(p.id)}">${esc(p.name)} · ${esc(roleLabel(p))}${!p.alive||p.fake?' · dead':''}</option>`).join('')}</select></label>
+      <label class="f">Life<select name="life"><option value="">Keep current status</option><option value="revive">Resurrect</option><option value="kill">Kill</option></select></label>
+      <label class="f">Character<select name="character"><option value="">Keep current character</option>${charOpts('',Object.keys(R).sort((a,b)=>R[a].name.localeCompare(R[b].name)))}</select></label>
+      <label class="f">Alignment<select name="alignment"><option value="">Keep current team</option><option value="good">Good</option><option value="evil">Evil</option></select></label>
+      <label class="f">Reminder<select name="reminder"><option value="">No reminder</option><option value="drunk">Drunk until removed</option><option value="wizardpoison">Poisoned until removed</option><option value="custom">Custom reminder</option></select></label>
+      <label class="f">Custom reminder text (optional)<input type="text" name="label" maxlength="120"></label>
+      <button class="btn small primary">Apply effect</button><p class="warn" data-wizard-error role="alert" hidden></p>
+    </form>
+    <form id="wizardNote">
+      <h3>Other effects and rulings</h3>
+      <label class="f">Private note<textarea name="note" required maxlength="1000" rows="2"></textarea></label>
+      <button class="btn small">Record note</button><p class="warn" data-wizard-error role="alert" hidden></p>
+    </form>
+    <h3>Wishes this game</h3>${logHTML?`<ul class="recapl">${logHTML}</ul>`:'<p class="muted">No wishes recorded yet.</p>'}
+  </section>`;
+}
+function recordWish({actor,wish,ruling,price,clue}){
+  const p = P(actor);
+  if(!wizardMode() || !p || !canWish(p)) return 'That Wizard cannot make a wish right now.';
+  if(!wish || !['granted','retry','spent'].includes(ruling)) return 'Enter the wish and choose a ruling.';
+  commit(()=>{
+    (S.wishes ||= []).push({id:uid(),actor,wish,ruling,price,clue,at:phaseLabel(),spent:ruling!=='retry'});
+    log(`Wizard wish ${ruling==='granted'?'granted':'declined'} (${p.name}).`);
+    const details = [`Wish: ${wish}`, price && `Price: ${price}`, clue && `Clue: ${clue}`].filter(Boolean).join(' · ');
+    S.log.splice(1,0,{at:phaseLabel(),t:details,private:true});
+  });
+}
+
+function setPlayerRole(p, role){
+  p.role = role;
+  p.shown = ['drunk','marionette'].includes(role) ? (pool('townsfolk').find(r=>!S.players.some(q=>q.role===r||q.shown===r)) || 'chef')
+    : role==='lunatic' ? (S.players.find(isDemon)?.role || pool('demon')[0] || 'imp') : null;
+  p.as = null;
+  S.chosen = [...new Set(S.players.map(q=>q.role).filter(Boolean))];
+}
+
+function applyWizardEffect({target,life,character,alignment,reminder='',label=''}){
+  const p = P(target);
+  if(!wizardMode() || !p?.role) return 'Choose a player in this game.';
+  if((character && !TEAMS[R[character]?.team]) || !['','revive','kill'].includes(life) || !['','good','evil'].includes(alignment)) return 'Choose a valid effect.';
+  const roleChange = character && character!==p.role;
+  const alignChange = alignment && alignment!==(isEvil(p)?'evil':'good');
+  if(!['','drunk','wizardpoison','custom'].includes(reminder)) return 'Choose a valid reminder.';
+  if(reminder==='custom' && !label) return 'Enter the custom reminder text.';
+  if(!life && !roleChange && !alignChange && !reminder) return 'Choose an effect or reminder.';
+  if(life==='revive' && p.alive && !p.fake) return 'This player is already alive.';
+  if(life==='kill' && !p.alive) return 'This player is already dead.';
+  if(roleChange && p.alive && isDemon(p) && R[character].team!=='demon' && !S.winner && !alive().some(q=>q!==p && isDemon(q)))
+    return 'Make the replacement Demon first. This is the last living Demon.';
+  commit(()=>{
+    if(life==='revive'){ revivePlayer(p); log(`Wizard effect: ${p.name} comes back to life.`); }
+    if(roleChange){
+      if(p.alive) endAbility(p);
+      p.align = isEvil(p) ? 'evil' : 'good';
+      p.rem = p.rem.filter(r=>!['noability','zombfirst','becameimp','undead'].includes(r.type));
+      setPlayerRole(p, character);
+      changed(p,'wizard');
+      log(`Wizard effect: ${p.name} becomes the ${R[character].name}.`);
+    }
+    if(alignChange){ p.align = alignment; log(`Wizard effect: ${p.name} becomes ${alignment}.`); }
+    if(reminder){
+      const labelText = reminder==='custom' ? label : reminder==='drunk' ? 'Drunk (Wizard)' : REM[reminder].label;
+      if(!p.rem.some(r=>r.type===reminder && r.label===labelText && !r.off)) addRem(p,reminder,{label:labelText});
+      log(`Wizard effect: added a reminder to ${p.name}.`);
+    }
+    if(life==='kill') kill(p,'Wizard effect',true);
+  });
+}
+
 function playerHTML(){
   const p = P(ui.sel);
   const back = `<button class="btn small" style="margin-bottom:10px" data-act="tab" data-k="main">← Back to ${S.stage!=='game'?'setup':S.phase.kind==='night'?'the night order':'the day'}</button>`;
@@ -2558,7 +2667,7 @@ function overlayHTML(){
       <div class="eyebrow">Game over</div><div class="bigtxt" style="font-size:clamp(2rem,7vw,4rem)">${esc(S.winner||'Final characters')}</div>
       <div class="final">${rows}</div><div class="hint">Click anywhere to close</div></button>`;
   }
-  return `<button class="show ${c.tone||''}" data-act="hideshow" aria-label="Hide screen">
+  return `<button class="show ${c.tone||''} ${c.clue?'wizard-clue':''}" data-act="hideshow" aria-label="Hide screen">
     ${c.eyebrow?`<div class="eyebrow">${esc(c.eyebrow)}</div>`:''}
     ${c.icon&&R[c.icon]?`<div class="bigtoken">${tokenSVG(c.icon)}</div>`:''}
     ${c.icons?`<div class="row" style="justify-content:center;gap:16px">${c.icons.filter(k=>R[k]).map(k=>`<div class="bigtoken" style="width:clamp(90px,16vw,150px);height:clamp(90px,16vw,150px)">${tokenSVG(k)}</div>`).join('')}</div>`:''}
@@ -2592,12 +2701,16 @@ function render(){
   if(!ui.msg) lastMsg = null;
   const game = S.stage==='game';
   const mainLabel = !game ? 'Setup' : S.phase.kind==='night' ? 'Night order' : 'Day';
-  const tabs = [['main',mainLabel],['player','Player'],['script','Characters']]; tabs.push(['log','Record']); tabs.push(['guide','Guide']);
+  const tabs = [['main',mainLabel],['player','Player'],['script','Characters']];
+  if(wizardMode()) tabs.push(['wizard','Wizard']);
+  else if(ui.tab==='wizard') ui.tab='main';
+  tabs.push(['log','Record']); tabs.push(['guide','Guide']);
   const body = ui.tab==='player' ? playerHTML() : ui.tab==='script' ? scriptHTML() : ui.tab==='guide' ? guideHTML()
-    : ui.tab==='log' ? summaryHTML()
+    : ui.tab==='wizard' ? wizardHTML() : ui.tab==='log' ? summaryHTML()
     : !game ? setupHTML() : S.phase.kind==='night' ? nightHTML() : dayHTML();
   document.getElementById('side').innerHTML = `<div class="card"><div class="tabs">${tabs.map(([k,l])=>`<button class="tab ${ui.tab===k?'on':''}" data-act="tab" data-k="${k}">${l}</button>`).join('')}</div>${body}</div>${game?effectHTML():''}`;
   document.getElementById('overlay').innerHTML = overlayHTML();
+  for(const el of document.querySelectorAll('.wrap,#dock')) el.inert = !!ui.show?.clue;
   document.getElementById('menu').innerHTML = menuHTML();
   saveUi();
   document.getElementById('recap').innerHTML = recapHTML();
@@ -2690,6 +2803,26 @@ document.addEventListener('change', e=>{
   if(t.id==='tokenOne' && t.files[0] && tokenTarget){ addTokenFiles([t.files[0]], tokenTarget); t.value=''; }
 });
 
+document.addEventListener('submit', e=>{
+  if(phoneMode || !['wizardWish','wizardEffect','wizardNote'].includes(e.target.id)) return;
+  e.preventDefault();
+  if(!wizardMode()) return;
+  const form = e.target;
+  const values = Object.fromEntries([...new FormData(form)].map(([key,value])=>[key,value.trim()]));
+  let error;
+  if(form.id==='wizardWish') error = recordWish(values);
+  if(form.id==='wizardEffect') error = applyWizardEffect(values);
+  if(form.id==='wizardNote'){
+    if(!values.note) error = 'Enter a note.';
+    else commit(()=>{ S.log.unshift({at:phaseLabel(),t:`Wizard note: ${values.note}`,private:true}); });
+  }
+  if(error){
+    const message = form.querySelector('[data-wizard-error]');
+    message.textContent = error;
+    message.hidden = false;
+  }else document.getElementById(form.id)?.querySelector('select,textarea')?.focus();
+});
+
 /* ---------- events ---------- */
 let wakeLock = null;
 async function keepAwake(){ try{ if(!wakeLock && navigator.wakeLock) wakeLock = await navigator.wakeLock.request('screen'); wakeLock?.addEventListener('release',()=>wakeLock=null); }catch(e){} }
@@ -2732,7 +2865,12 @@ document.addEventListener('click', e=>{
     case 'toggleorder': ui.showOrder = !ui.showOrder; return render();
     case 'closerecap': ui.recap = null; return render();
     case 'recapgo': { const night = ui.recap==='night'; ui.recap = null; return commit(night ? toDay : toNight); }
-    case 'tab': ui.tab = el.dataset.k; return render();
+    case 'tab': ui.tab = el.dataset.k; render(); if(ui.tab==='wizard') document.getElementById('wizard-title')?.focus(); return;
+    case 'wizardclue': {
+      const w = wizardMode() && S.wishes?.find(w=>w.id===id);
+      if(w?.clue){ ui.show = {eyebrow:'A Wizard’s wish',sub:w.clue,clue:w.id}; render(); document.querySelector('.show')?.focus(); return; }
+      return;
+    }
     case 'dismiss': ui.msg=null; return render();
     case 'hideshow': {
       const c = ui.show; ui.show = null;
@@ -2742,7 +2880,7 @@ document.addEventListener('click', e=>{
         const next = S.players.find(q=>!q.revealed);
         ui.show = next ? passCard(next) : {eyebrow:'Everyone has their character', big:'Turn the screen back to the Storyteller'};
       }
-      return render();
+      render(); if(c?.clue) document.querySelector('[data-act=wizardclue][data-id="'+CSS.escape(c.clue)+'"]')?.focus(); return;
     }
     case 'voice': voice = !voice; try{ localStorage.setItem('tb-voice', voice?'1':'0'); }catch(err){} if(voice) say('Voice is on.'); return render();
     case 'final': if(!S.revealed) commit(()=>{ S.revealed = true; }); ui.show = {final:true}; return render();
@@ -2801,7 +2939,7 @@ document.addEventListener('click', e=>{
       ui.recap = 'day'; return render();
     case 'execute': return commit(()=>{ execute(p); ui.show={eyebrow:'The town has spoken', big:`${p.name} is executed`, tone:'evil'}; });
     case 'killp': return commit(()=>kill(p,'marked dead by you'));
-    case 'revive': return commit(()=>{ p.alive=true; p.ghost=true; log(`${p.name} is alive again.`); });
+    case 'revive': if(p && (!p.alive || p.fake)) return commit(()=>{ revivePlayer(p); log(`${p.name} is alive again.`); }); return;
     case 'ghost': return commit(()=>{ p.ghost=!p.ghost; log(p.ghost ? `${p.name} gets their ghost vote back.` : `${p.name} used their ghost vote.`); });
     case 'sheetpdf': ui.msg = 'Making the PDF…'; render(); sheetCanvas().then(c=>saveData(sheetName('pdf'), pdfFromCanvas(c), 'Character sheet saved as a PDF.')); return;
     case 'sheetpng': ui.msg = 'Making the image…'; render(); sheetCanvas().then(c=>c.toBlob(b=>saveData(sheetName('png'), b, 'Character sheet saved as an image.'), 'image/png')); return;
@@ -3054,9 +3192,7 @@ document.addEventListener('change', e=>{
   });
   if(k==='pname'){ const v = el.value.trim(); if(v && S.players.some(q=>q!==p && q.name.trim().toLowerCase()===v.toLowerCase())){ ui.msg = `Someone is already called ${v}.`; return render(); } return commit(()=>{ p.name = v || p.name; }); }
   if(k==='role') return commit(()=>{
-    p.role = el.value;
-    p.shown = ['drunk','marionette'].includes(p.role) ? (pool('townsfolk').find(r=>!S.players.some(q=>q.role===r||q.shown===r)) || 'chef') : p.role==='lunatic' ? (S.players.find(isDemon)?.role || pool('demon')[0] || 'imp') : null; p.as = null;
-    S.chosen = [...new Set(S.players.map(q=>q.role).filter(Boolean))];
+    setPlayerRole(p, el.value);
     if(S.stage!=='game'){ p.align = null; }
     if(S.stage==='game') log(`${p.name} is now the ${roleLabel(p)}.`);
   });
@@ -3206,7 +3342,7 @@ function boardData(){
     noms: day ? d.noms.map(x=>({from:P(x.nominator)?.name||'?', to:P(x.nominee)?.name||'?', votes:x.votes??'–'})) : [],
     timer: day ? {running:timer.running, end:timer.end, left:timer.left} : null,
     news: game ? (S.news||'') : '', winner: S.winner || null,
-    record: S.revealed ? S.log.slice(0,800).reverse().map(l=>({at:l.at, t:l.t})) : null,
+    record: S.revealed ? S.log.filter(l=>!l.private).slice(0,800).reverse().map(l=>({at:l.at, t:l.t})) : null,
     reveal: S.revealed ? S.players.map(p=>({name:p.name, role:R[p.role]?.name||'', team:team(p)||'', drunkAs: THINKS.includes(p.role) ? (R[p.shown]?.name||'') : ''})) : null};
 }
 function publishBoard(){
