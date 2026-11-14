@@ -138,5 +138,85 @@ test('480 repeated changes across day/night and table sizes survive save and und
     }
   }
 });
+const voting = (p,rule,count,expires='never',purpose='effect')=>applyWizardVoting({target:p.id,rule,count:String(count),expires,purpose});
+const town = (count,expires='never')=>applyWizardVoting({count:String(count),expires},true);
+test('Legacy ghost votes, weighted dead ballots, and Banshee permission',()=>{
+  const [,,p]=setup('wizard','wizard','day');
+  p.alive=false;
+  assert.equal(ghostVotes(p),1);
+  voting(p,'ghost',4);
+  voting(p,'wizardvote',3);
+  assert.equal(votesPerHand(p),3);
+  assert.equal(boardData().players[2].ghostVotes,4);
+  setGhostVotes(p,0);
+  assert.equal(votesPerHand(p),0);
+  addRem(p,'banshee');
+  assert.equal(votesPerHand(p),3);
+  voting(p,'wizardvote','');
+  assert.equal(votesPerHand(p),2);
+  revivePlayer(p);
+  assert.equal(ghostVotes(p),1);
+});
+test('Dead nomination allowance, extra nominations, and expiry',()=>{
+  const [d,,p,q,r]=setup('wizard','wizard','day');
+  p.alive=false;
+  voting(p,'wizardnom',2,'dusk','price');
+  assert.match(S.log[0].t,/Wizard price/);
+  for(const target of [d,q]){
+    ui.pick={kind:'nominator'}; resolvePick(p);
+    assert.equal(ui.pick.kind,'nominee');
+    resolvePick(target);
+  }
+  ui.pick={kind:'nominator'}; resolvePick(p);
+  assert.equal(ui.pick.kind,'nominator');
+  assert.match(ui.msg,/already nominated/);
+  voting(r,'wizardnom',0,'dawn'); resolvePick(r);
+  assert.match(ui.msg,/cannot nominate/);
+  purge('dusk');
+  assert.equal(voteRule(p,'wizardnom'),undefined);
+  assert.equal(voteRule(r,'wizardnom'),0);
+  purge('dawn');
+  assert.equal(voteRule(r,'wizardnom'),undefined);
+});
+test('Stacked extra lives absorb ordinary deaths and forced deaths bypass them',()=>{
+  const [,,p]=setup('wizard','wizard','day');
+  effect(p,{reminder:'wizardlife'});
+  effect(p,{reminder:'wizardlife',purpose:'price'});
+  assert.equal(kill(p,'test'),false);
+  assert.equal(kill(p,'test again'),false);
+  assert.equal(kill(p,'third time'),true);
+  revivePlayer(p); effect(p,{reminder:'wizardlife'});
+  assert.equal(kill(p,'forced',true),true);
+});
+test('240 weighted ballot, threshold, tie, reload and undo scenarios',()=>{
+  for(const size of [5,8,12,15]) for(let weight=1;weight<=60;weight++){
+    const [d,w,p,q,r]=setup('wizard','wizard','day',size);
+    voting(d,'wizardvote',weight,'dusk');
+    voting(w,'wizardvote',weight);
+    voting(p,'wizardvote',0);
+    assert.equal(town(weight,'dusk'),undefined);
+    assert.equal(boardData().needed,weight);
+    S.day.noms=[{nominee:q.id,nominator:p.id,votes:null},{nominee:r.id,nominator:w.id,votes:null}];
+    ui.pick={kind:'voters',i:0,chosen:[]};
+    resolvePick(p);
+    assert.equal(S.day.noms[0].votes,null);
+    resolvePick(d);
+    assert.equal(blockOf().id,q.id);
+    assert.equal(demonVoted(),true);
+    voting(d,'wizardvote',0);
+    assert.equal(blockOf().votes,weight,'earlier ballots retain their original weight');
+    ui.pick={kind:'voters',i:1,chosen:[]};
+    resolvePick(w);
+    assert.equal(blockOf().id,null);
+    assert.equal(blockOf().votes,weight);
+    assert.equal(load().day.noms[1].votes,weight);
+    resolvePick(w);
+    assert.equal(blockOf().id,q.id);
+    S=JSON.parse(undo.pop().s);
+    assert.equal(blockOf().id,null);
+    purge('dusk');
+    assert.equal(needed(),Math.ceil(size/2));
+  }
+});
 console.log(checks+' Wizard scenario groups passed');
 `,ctx);
