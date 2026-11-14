@@ -624,6 +624,7 @@ const R = {
   dreamer:{name:'Dreamer',team:'townsfolk',ability:'Each night, picks a player (not themself) and learns 1 good and 1 evil character, one of which is right.'},
   seamstress:{name:'Seamstress',team:'townsfolk',ability:'Once per game, at night, picks 2 other players and learns if they are on the same team.'},
   philosopher:{name:'Philosopher',team:'townsfolk',ability:'Once per game, at night, picks a good character and gains that ability. If that character is in play, that player is drunk.'},
+  shugenja:{name:'Shugenja',team:'townsfolk',ability:'Starts knowing if their closest evil player is clockwise or anti-clockwise. If equally close, either answer can be given.'},
   mathematician:{name:'Mathematician',team:'townsfolk',ability:"Each night, learns how many players' abilities went wrong since dawn because of another character."},
   artist:{name:'Artist',team:'townsfolk',ability:'Once per game, during the day, privately asks the Storyteller any yes or no question.',day:'may privately ask you one yes or no question, once per game.',once:true},
   flowergirl:{name:'Flowergirl',team:'townsfolk',ability:'Each night after the first, learns whether a Demon voted today.'},
@@ -685,7 +686,7 @@ const R = {
   bootlegger:{name:'Bootlegger',team:'fabled',ability:'This script has homebrew characters or rules.'}
 };
 const TEAMS = {townsfolk:'Townsfolk',outsider:'Outsiders',minion:'Minions',demon:'Demon'};
-const DIST = {3:[1,1,0,1],5:[3,0,1,1],6:[3,1,1,1],7:[5,0,1,1],8:[5,1,1,1],9:[5,2,1,1],10:[7,0,2,1],11:[7,1,2,1],12:[7,2,2,1],13:[9,0,3,1],14:[9,1,3,1],15:[9,2,3,1]};
+const DIST = {3:[1,1,0,1],4:[3,0,0,1],5:[3,0,1,1],6:[3,1,1,1],7:[5,0,1,1],8:[5,1,1,1],9:[5,2,1,1],10:[7,0,2,1],11:[7,1,2,1],12:[7,2,2,1],13:[9,0,3,1],14:[9,1,3,1],15:[9,2,3,1]};
 const SCRIPTS = {
   tb:{name:'Trouble Brewing',by:'The Pandemonium Institute',roles:['washerwoman','librarian','investigator','chef','empath','fortuneteller','undertaker','monk','ravenkeeper','virgin','slayer','soldier','mayor','butler','drunk','recluse','saint','poisoner','spy','scarletwoman','baron','imp']},
   threensy:{name:'Threensyville',by:'Ken Cheng',roles:['snakecharmer','steward','mayor','drunk','mutant','imp']},
@@ -698,9 +699,10 @@ const SCRIPTS = {
   pukki:{name:'Pukki',by:'Emerson',fabled:['toymaker'],roles:['clockmaker','investigator','empath','chambermaid','artist','sage','lunatic','drunk','godfather','assassin','pukka']},
   witsend:{name:"Wit's End",by:'Emerson',fabled:['toymaker'],roles:['investigator','clockmaker','empath','fortuneteller','ravenkeeper','artist','lunatic','drunk','godfather','marionette','pukka','imp']},
   highnoon:{name:'High Noon (Hard Version)',by:'Stephen Dewey',fabled:['sentinel'],roles:['pixie','snakecharmer','philosopher','professor','slayer','cannibal','moonchild','recluse','marionette','eviltwin','zombuul','legion']},
-  wizard:{name:'Wizard Trouble',by:'',roles:['washerwoman','investigator','chef','empath','fortuneteller','undertaker','monk','ravenkeeper','virgin','slayer','artist','fisherman','savant','drunk','recluse','saint','zealot','poisoner','spy','baron','wizard','imp']}
+  wizard:{name:'Wizard Trouble',by:'',roles:['washerwoman','investigator','chef','empath','fortuneteller','undertaker','monk','ravenkeeper','virgin','slayer','artist','fisherman','savant','drunk','recluse','saint','zealot','poisoner','spy','baron','wizard','imp']},
+  sesots:{name:'Short End of the Stick',by:'LowlyCube',counts:[4],note:'For 4 players: 3 Townsfolk and the Pukka. No Minions or Outsiders.',roles:['shugenja','empath','mathematician','slayer','seamstress','philosopher','pukka']}
 };
-const FIRST = ['philosopher','alchemist','minioninfo','lunatic','demoninfo','king','marionette','poisoner','widow','wizard','snakecharmer','steward','godfather','eviltwin','witch','cerenovus','harpy','pukka','pixie','washerwoman','librarian','investigator','chef','empath','fortuneteller','butler','clockmaker','dreamer','seamstress','balloonist','bountyhunter','spy','ogre','chambermaid','mathematician','leviathan'];
+const FIRST = ['philosopher','alchemist','minioninfo','lunatic','demoninfo','king','marionette','poisoner','widow','wizard','snakecharmer','steward','godfather','eviltwin','witch','cerenovus','harpy','pukka','pixie','washerwoman','librarian','investigator','chef','empath','fortuneteller','butler','clockmaker','dreamer','seamstress','balloonist','shugenja','bountyhunter','spy','ogre','chambermaid','mathematician','leviathan'];
 const OTHER = ['philosopher','poisoner','innkeeper','wizard','gambler','snakecharmer','monk','witch','cerenovus','pithag','harpy','newimp','lunatic','exorcist','lycanthrope','legion','imp','zombuul','pukka','fanggu','nodashii','vortox','vigormortis','alhadikhia','assassin','godfather','barber','sweetheart','sage','banshee','professor','choirboy','farmer','tinker','moonchild','ravenkeeper','empath','fortuneteller','undertaker','dreamer','flowergirl','towncrier','oracle','seamstress','juggler','balloonist','king','bountyhunter','butler','spy','chambermaid','mathematician','gatekeeper','leviathan'];
 const KILLERS = ['imp','fanggu','nodashii','vortox','vigormortis','zombuul','legion'];
 const nm = p => p ? p.name : '?';
@@ -757,6 +759,7 @@ const STEP = {
   bountyhunter:{how:'The player they knew died. Wake them and show them another evil player.',info:'player',label:'This player is evil',need:()=>{ const k = S.players.find(p=>has(p,'bhknow')); return k && !k.alive ? null : 'Their evil player is alive'; }},
   ogre:{how:"Wake the Ogre, show the screen, and click who they point at. The Ogre secretly joins that player's team.",choose:'Choose a player',pick:'ogre',rule:{notSelf:1}},
   chambermaid:{how:'Wake the Chambermaid, click the 2 players they point at, then show the number.',choose:'Choose 2 living players',pick:'chambermaid',n:2,rule:{alive:1,notSelf:1},info:'number',label:'How many of them woke tonight'},
+  shugenja:{how:'Wake the Shugenja and show which way their closest evil player sits.',info:'yesno',label:'Your closest evil player is'},
   mathematician:{how:'Wake them and show how many players got wrong results since dawn because of another character (drunk, poisoned, or given false info).',info:'number',label:'Abilities that went wrong'},
   'leviathan@1':{title:'Leviathan',how:'After everyone wakes, announce that the Leviathan is in play.',deadOk:1,cards:()=>[{label:'Show everyone',card:{eyebrow:'The Demon in play is the',icon:'leviathan',big:'Leviathan',sub:'If more than 1 good player is executed, evil wins. After day 5, evil wins.',tone:'evil'}}]},
   leviathan:{title:'Leviathan',how:()=>`The Leviathan does not wake to choose victims and does not kill at night. Tomorrow is day ${S.phase.n}. You may remind everyone the Leviathan is in play. Good players executed so far: ${S.goodExecs||0} (2 means evil wins). ${S.phase.n>=5?'This is the last day: after it, evil wins.':''}`},
@@ -946,6 +949,7 @@ const ROLE_ICON = {
   dreamer:'<path d="M6.5 17a4 4 0 0 1 0-8 5.2 5.2 0 0 1 10-1.4A4.6 4.6 0 0 1 17.5 17z"/><path d="M8.5 13c1.2-1.5 3-1.5 4 0s2.8 1.5 4 0"/>',
   seamstress:'<circle cx="6.5" cy="17.5" r="2.5"/><circle cx="6.5" cy="6.5" r="2.5"/><path d="M8.6 8L20.5 17.5M8.6 16L20.5 6.5"/>',
   philosopher:'<path d="M3.5 12.5h6.5v2.5a4.5 4.5 0 0 1-4.5 4.5A2 2 0 0 1 3.5 17.5z"/><path d="M10 13.5l10.5-8"/>',
+  shugenja:'<path d="M3.5 6.5c5 1 12 1 17 0"/><path d="M5 10h14"/><path d="M7 7v13M17 7v13M12 7.3V10"/>',
   mathematician:'<path d="M12 3.5L21 20H3z"/><path d="M12 3.5L9.5 20M12 3.5L14.5 20M6 14.5h12"/>',
   artist:'<path d="M8 13h8l-1 7.5H9z"/><path d="M10 13L7 3.8M12 13V3.5M14 13l3-9.2"/>',
   flowergirl:'<circle cx="12" cy="8" r="1.7"/><circle cx="12" cy="4.7" r="1.6"/><circle cx="15.2" cy="7" r="1.6"/><circle cx="14" cy="10.7" r="1.6"/><circle cx="10" cy="10.7" r="1.6"/><circle cx="8.8" cy="7" r="1.6"/><path d="M12 12.3V21M12 17.5c-2 0-3.5-1-4-2.5"/>',
@@ -1003,7 +1007,7 @@ const ROLE_ICON = {
 let tokenImg = (()=>{ try{ return JSON.parse(localStorage.getItem('tb-token-images')||'{}') || {}; }catch(e){ return {}; } })();
 function saveTokens(){ try{ localStorage.setItem('tb-token-images', JSON.stringify(tokenImg)); return true; }catch(e){ ui.msg = 'Not enough browser space to keep all these images. Try smaller files.'; return false; } }
 let tokenMode = (()=>{ try{ return localStorage.getItem('tb-token-mode') || 'icon'; }catch(e){ return 'icon'; } })();
-const OFFICIAL = new Set('alchemist alhadikhia artist assassin balloonist banshee barber baron bootlegger bountyhunter butler cannibal cerenovus chambermaid chef choirboy clockmaker dreamer drunk empath eviltwin exorcist fanggu farmer fisherman flowergirl fool fortuneteller gambler goblin godfather golem harpy hermit imp innkeeper investigator juggler king klutz legion leviathan librarian lunatic lycanthrope marionette mathematician mayor minstrel monk moonchild mutant nodashii ogre oracle philosopher pithag pixie poisoner politician professor psychopath pukka ravenkeeper recluse sage saint savant scarletwoman seamstress sentinel slayer snakecharmer soldier spy sweetheart tinker towncrier toymaker undertaker vigormortis virgin vortox washerwoman widow witch wizard zealot zombuul'.split(' '));
+const OFFICIAL = new Set('alchemist alhadikhia artist assassin balloonist banshee barber baron bootlegger bountyhunter butler cannibal cerenovus chambermaid chef choirboy clockmaker dreamer drunk empath eviltwin exorcist fanggu farmer fisherman flowergirl fool fortuneteller gambler goblin godfather golem harpy hermit imp innkeeper investigator juggler king klutz legion leviathan librarian lunatic lycanthrope marionette mathematician mayor minstrel monk moonchild mutant nodashii ogre oracle philosopher pithag pixie poisoner politician professor psychopath pukka ravenkeeper recluse sage saint savant scarletwoman seamstress sentinel shugenja slayer snakecharmer soldier spy sweetheart tinker towncrier toymaker undertaker vigormortis virgin vortox washerwoman widow witch wizard zealot zombuul'.split(' '));
 const offIcon = k => OFFICIAL.has(k) ? `icons/${k}.webp` : null;
 function tokenSVG(k, label){
   if(k && tokenImg[k] && tokenMode==='whole') return `<img class="tokensvg tokimg" src="${tokenImg[k]}" alt="">`;
@@ -1494,7 +1498,16 @@ function liveAns(k){
   const two = (S.pickedIds?.[k]||[]).map(P).filter(Boolean);
   if(two.length===2 && k==='fortuneteller') return two.some(q=>isDemon(q) || has(q,'redherring')) ? 'Yes' : 'No';
   if(two.length===2 && k==='seamstress') return regEvil(two[0])===regEvil(two[1]) ? 'Yes' : 'No';
+  if(k==='shugenja') return shugenjaDir(S.players.find(p=>abilityOf(p)==='shugenja'));
   return ui.form[k]?.ans;
+}
+function shugenjaDir(a){
+  const ps = S.players, n = ps.length, i = ps.indexOf(a); if(!a) return null;
+  for(let d=1; d<=n/2; d++){
+    const cw = regEvil(ps[(i+d)%n]), acw = regEvil(ps[(i-d+n)%n]);
+    if(cw && acw) return 'Either'; if(cw) return 'Clockwise'; if(acw) return 'Anti-clockwise';
+  }
+  return null;
 }
 function infoSuggest(k, a){
   const st = stepDef(k), ps = S.players, T = [], F = [], others = ps.filter(p=>p!==a);
@@ -1529,6 +1542,7 @@ function infoSuggest(k, a){
       add(F, not(ans), {ans:not(ans)});
     }
     if(k==='flowergirl' && ans && S.lastDay?.demonVoted!=null){ add(T, ans, {ans}); add(F, not(ans), {ans:not(ans)}); note = 'Based on what you recorded today.'; }
+    if(k==='shugenja' && ans){ const dirs = ['Clockwise','Anti-clockwise']; if(ans==='Either') dirs.forEach(x=>add(T, `${x} (equally close)`, {ans:x})); else { add(T, ans, {ans}); add(F, dirs.find(x=>x!==ans), {ans:dirs.find(x=>x!==ans)}); } }
     if(k==='towncrier' && ans){ add(T, ans, {ans}); add(F, not(ans), {ans:not(ans)}); note = 'Based on the nominations you recorded today.'; }
   }
   if(st.info==='character' && (k!=='ravenkeeper' || S.pickedIds?.ravenkeeper)){
@@ -2049,7 +2063,7 @@ function setupHTML(){
       <div class="roster">${[...roster, ...extra.map(p=>p.name)].map(chip).join('')}</div>
       <div class="row" style="margin-top:8px"><input type="text" id="rnew" placeholder="New name" aria-label="New player's name" autocomplete="off" style="flex:1;min-width:0"><button class="btn small primary" data-act="radd">${ic('plus')}Add</button></div>
       <div class="row" style="margin-top:8px"><span class="seated"><b>${n}</b> seated</span>${n?'<button class="btn small" data-act="rclear">Clear seats</button>':''}<button class="btn small ${ui.editRoster?'primary':''}" data-act="redit">${ui.editRoster?'Done editing':'Edit list'}</button></div>
-      ${okN?`<p class="muted" style="margin-top:8px">${t} Townsfolk · ${o} Outsider${o===1?'':'s'} · ${m} Minion${m>1?'s':''} · ${d} Demon${n<=6?(evilInfo()?'. The Toymaker gives evil their normal info even with 5 or 6 players.':'. With 6 or fewer players, Minions and the Demon do not learn each other.'):''}</p>`:`<p class="warn">${esc(scriptName())} needs ${lo===hi?lo:lo+' to '+hi} players. ${n<lo?`Seat ${lo-n} more.`:`Take ${n-hi} off.`}</p>`}
+      ${okN?`<p class="muted" style="margin-top:8px">${t} Townsfolk · ${o} Outsider${o===1?'':'s'} · ${m} Minion${m===1?'':'s'} · ${d} Demon${n<=6?(evilInfo()?'. The Toymaker gives evil their normal info even with 5 or 6 players.':'. With 6 or fewer players, Minions and the Demon do not learn each other.'):''}</p>`:`<p class="warn">${esc(scriptName())} needs ${lo===hi?lo:lo+' to '+hi} players. ${n<lo?`Seat ${lo-n} more.`:`Take ${n-hi} off.`}</p>`}
       ${dupNames().length?`<p class="warn">Two players are called ${esc(dupNames().join(', '))}. Give everyone a different name so phones and the record can tell them apart.</p>`:''}
       <div style="margin-top:12px"><button class="btn primary big" data-act="stage" data-to="chars" ${dupNames().length||!okN?'disabled':''}>Next: choose characters</button></div>`;
   }
@@ -2129,7 +2143,7 @@ function previewHTML(){
     <div class="row" style="margin-top:14px"><button class="btn" data-act="closepreview">Back</button><button class="btn primary" style="flex:1" data-act="setscript" data-v="${id}">Play ${esc(sc.name)}</button></div>
   </div></div>`;
 }
-function playerCounts(){ if(S.script==='threensy') return [3]; return S.script==='teensy' ? [5,6] : Array.from({length:11},(_,i)=>i+5).filter(c=>DIST[c][0]<=pool('townsfolk').length+(pool('outsider').length>=DIST[c][1]?0:-99) && (DIST[c][2]<=pool('minion').length || pool('demon').includes('legion'))); }
+function playerCounts(){ if(S.script==='threensy') return [3]; return S.script==='teensy' ? [5,6] : SCRIPTS[S.script]?.counts || Array.from({length:11},(_,i)=>i+5).filter(c=>DIST[c][0]<=pool('townsfolk').length+(pool('outsider').length>=DIST[c][1]?0:-99) && (DIST[c][2]<=pool('minion').length || pool('demon').includes('legion'))); }
 
 /* ---------- shareable character sheet ---------- */
 const SHEET_TEAMS = [['townsfolk','Townsfolk'],['outsider','Outsiders'],['minion','Minions'],['demon','Demons']];
@@ -2295,9 +2309,11 @@ function stepBody(s){
       if(s.k==='fortuneteller'){ const rh = S.players.filter(p=>has(p,'redherring')); parts.push(`<div class="truth">${ans?`True answer: <b>${ans}</b>.`:'Yes if either is'} the Demon (${names(S.players.filter(isDemon))}) or the red herring (${rh.length?names(rh):'not set'}). A Recluse may also count.</div>`); }
       else if(s.k==='towncrier') parts.push(`<div class="truth">Based on the nominations you recorded: <b>${ans}</b>. If you didn't record them all, use what you saw.</div>`);
       else if(s.k==='flowergirl') parts.push(`<div class="truth">${S.lastDay?.demonVoted!=null?`From what you recorded today: <b>${ans}</b>.`:`Did the Demon (${names(S.players.filter(isDemon))}) vote today? Nothing was recorded, so use what you saw.`}</div>`);
+      else if(s.k==='shugenja') parts.push(`<div class="truth">${ans==='Either'?'Evil players are equally close both ways: give either answer.':`True answer: <b>${ans||'?'}</b>.`} Seats go clockwise in the order you entered them.</div>`);
       else parts.push(`<div class="truth">True answer: <b>${ans||'?'}</b>.</div>`);
       parts.push(suggHTML(s.k, a));
-      parts.push(`<div class="row"><button class="btn ${ans==='Yes'?'primary':'good'}" data-act="showyn" data-k="${s.k}" data-v="Yes">${ic('eye')}Show YES</button><button class="btn ${ans==='No'?'primary':'good'}" data-act="showyn" data-k="${s.k}" data-v="No">${ic('eye')}Show NO</button>${s.k==='fortuneteller'?'<button class="btn small" data-act="pick" data-kind="redherring">Move red herring</button>':''}</div>`);
+      if(s.k==='shugenja') parts.push(`<div class="row"><button class="btn ${ans==='Clockwise'?'primary':'good'}" data-act="showyn" data-k="shugenja" data-v="Clockwise">${ic('eye')}Show CLOCKWISE</button><button class="btn ${ans==='Anti-clockwise'?'primary':'good'}" data-act="showyn" data-k="shugenja" data-v="Anti-clockwise">${ic('eye')}Show ANTI-CLOCKWISE</button></div>`);
+      else parts.push(`<div class="row"><button class="btn ${ans==='Yes'?'primary':'good'}" data-act="showyn" data-k="${s.k}" data-v="Yes">${ic('eye')}Show YES</button><button class="btn ${ans==='No'?'primary':'good'}" data-act="showyn" data-k="${s.k}" data-v="No">${ic('eye')}Show NO</button>${s.k==='fortuneteller'?'<button class="btn small" data-act="pick" data-kind="redherring">Move red herring</button>':''}</div>`);
     }
     if(st.info==='character' && (s.k!=='ravenkeeper' || f.role)){
       const ex = s.k==='undertaker' ? P(S.executedLast||'') : null;
