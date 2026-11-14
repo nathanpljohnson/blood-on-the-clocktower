@@ -218,5 +218,86 @@ test('240 weighted ballot, threshold, tie, reload and undo scenarios',()=>{
     assert.equal(needed(),Math.ceil(size/2));
   }
 });
+test('Scheduled events survive reload and wait for explicit approval',()=>{
+  for(const trigger of ['dawn','dusk','death','execution']){
+    for(let i=0;i<30;i++){
+      const [,,p,q]=setup('wizard','wizard',trigger==='dawn'?'night':'day');
+      const fields={kind:'batch',trigger,triggerTarget:q.id,effects:[{target:p.id,life:'',character:'monk',alignment:''}]};
+      assert.equal(queueWizardItem(fields),undefined);
+      S=load();
+      if(trigger==='death'){wizardTrigger('death',p.id); assert.equal(S.wizardQueue[0].status,'waiting'); kill(P(q.id),'test',true);}
+      if(trigger==='execution') execute(P(q.id));
+      if(trigger==='dawn') toDay();
+      if(trigger==='dusk') toNight();
+      const item=S.wizardQueue[0];
+      assert.equal(item.status,'ready');
+      assert.equal(P(p.id).role,'chef');
+      assert.equal(wizardBatchError(item.effects),undefined);
+      const before=JSON.stringify(S);
+      commit(()=>{item.status='done';applyWizardEffects(item.effects);});
+      assert.equal(P(p.id).role,'monk');
+      assert.equal(undo.at(-1).s,before);
+    }
+  }
+});
+test('Demon swap and the price apply atomically, with one undo',()=>{
+  const [d,w,p]=setup();
+  const effects=[{target:d.id,life:'',character:'wizard',alignment:''},{target:w.id,life:'',character:'imp',alignment:''},
+    {target:p.id,rule:'ghost',count:'3',expires:'never',purpose:'price'}];
+  assert.match(wizardBatchError(effects.slice(0,1)),/replacement Demon/);
+  assert.equal(wizardBatchError(effects),undefined);
+  const before=JSON.stringify(S);
+  commit(()=>applyWizardEffects(effects));
+  assert.equal(S.winner,null);
+  assert.equal(w.role,'imp');
+  assert.equal(d.role,'wizard');
+  assert.equal(ghostVotes(p),3);
+  assert.equal(undo.at(-1).s,before);
+});
+test('Table-wide Tinker, suppression and retained dead ability expire correctly',()=>{
+  const [,,p]=setup();
+  wizardAbilityRule({rule:'grant',character:'tinker',everyone:'yes',expires:'dusk'});
+  assert.equal(steps().find(s=>s.k==='tinker').actors.length,S.players.length);
+  wizardAbilityRule({rule:'mute',target:p.id,expires:'dawn'});
+  assert.equal(hasAbility(p,'tinker'),false);
+  assert.equal(actorsFor('tinker').includes(p),false);
+  purge('dawn'); assert.equal(hasAbility(p,'tinker'),true);
+  wizardAbilityRule({rule:'keep',target:p.id,expires:'dusk'});
+  p.alive=false;
+  assert.equal(retainedAbility(p),true);
+  purge('dusk');
+  assert.equal(retainedAbility(p),false);
+  assert.equal(actorsFor('tinker').length,0);
+});
+test('Bypass is consumed once, tied favorite is selected, and the second execution is bounded',()=>{
+  const [,,a,b,c,d]=setup('wizard','wizard','day');
+  assert.equal(wizardException({rule:'bypass'}),undefined);
+  nominate(a,b); nominate(c,d);
+  const [first,second]=S.day.noms;
+  assert.equal(first.bypass,true);
+  assert.equal(second.bypass,false);
+  first.votes=1; second.votes=1;
+  assert.equal(blockOf().id,b.id);
+  second.votes=4; first.votes=4;
+  assert.equal(blockOf().id,null);
+  wizardException({rule:'tie',target:d.id});
+  assert.equal(blockOf().id,d.id);
+  execute(d);
+  assert.equal(wizardException({rule:'extra'}),undefined);
+  assert.equal(blockOf(),null);
+  execute(b);
+  assert.deepEqual(S.day.executions,[d.id,b.id]);
+  assert.match(wizardException({rule:'extra'}),/first execution/);
+});
+test('Scheduled private card contents stay off player board and game record',()=>{
+  const [,,p]=setup();
+  queueWizardItem({kind:'card',trigger:'now',recipient:p.id,message:'secret message',include:'grimoire'});
+  S=load();
+  assert.equal(S.wizardQueue[0].message,'secret message');
+  assert.equal(S.wizardQueue[0].status,'ready');
+  S.revealed=true;
+  assert.doesNotMatch(JSON.stringify(boardData()),/secret message/);
+  assert.doesNotMatch(JSON.stringify(makeRecord()),/secret message/);
+});
 console.log(checks+' Wizard scenario groups passed');
 `,ctx);

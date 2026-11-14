@@ -805,6 +805,9 @@ function stepDef(k){
 }
 const stepTitle = k => STEP[k]?.title || STEP[k+'@1']?.title || R[k]?.name || k;
 const REM = {
+  wizardability:{label:'Extra ability',expires:'never',cls:'safe'},
+  wizardmute:{label:'Abilities suppressed',expires:'never',cls:'muted',bad:1},
+  wizarddead:{label:'Keeps abilities while dead',expires:'never',cls:'safe'},
   wizardvote:{label:'Votes per hand',expires:'never',cls:'vote'},
   wizardnom:{label:'Nominations per day',expires:'never',cls:'vote'},
   wizardlife:{label:'Extra life',expires:'never',cls:'safe'},
@@ -1029,7 +1032,9 @@ const THINKS = ['drunk','marionette','lunatic'];
 const seen = p => THINKS.includes(p.role) && p.shown ? p.shown : p.role;
 const wake = p => p.as || (['drunk','marionette'].includes(p.role) ? p.shown : p.role);
 const abilityOf = wake;
-const hasAbility = (p,k) => abilityOf(p)===k || (p.role==='hermit' && k!=='hermit' && R[k]?.team==='outsider' && scriptRoles().includes(k));
+const retainedAbility = p => has(p,'undead') || has(p,'wizarddead');
+const extraAbilities = p => p.rem.filter(r=>r.type==='wizardability' && !r.off).map(r=>r.character);
+const hasAbility = (p,k) => !has(p,'wizardmute') && (abilityOf(p)===k || extraAbilities(p).includes(k) || (p.role==='hermit' && k!=='hermit' && R[k]?.team==='outsider' && scriptRoles().includes(k)));
 const team = p => R[p.role]?.team;
 const isDemon = p => team(p)==='demon';
 const isEvil = p => p.align ? p.align==='evil' : ['minion','demon'].includes(team(p));
@@ -1043,13 +1048,13 @@ function townNeighbours(p){
 const ndPoisoned = p => S.players.some(d=>d.role==='nodashii' && d.alive && d!==p && townNeighbours(d).includes(p) && !rawImpaired(d));
 const rawImpaired = p => ['drunk','marionette'].includes(p.role) || p.rem.some(r=>!r.off && REM[r.type]?.bad);
 const impaired = p => rawImpaired(p) || ndPoisoned(p);
-const wizardHolders = () => S.players.filter(p=>p.role==='wizard' || (p.as==='wizard' && !['drunk','marionette','lunatic'].includes(p.role)));
-const canWish = p => wizardHolders().includes(p) && ((p.alive && !p.fake) || has(p,'undead')) && !impaired(p) && !has(p,'noability')
+const wizardHolders = () => S.players.filter(p=>p.role==='wizard' || ((p.as==='wizard' || extraAbilities(p).includes('wizard')) && !['drunk','marionette','lunatic'].includes(p.role)));
+const canWish = p => wizardHolders().includes(p) && ((p.alive && !p.fake) || retainedAbility(p)) && !impaired(p) && !has(p,'noability')
   && !S.wishes?.some(w=>w.actor===p.id && w.spent);
-const wizardMode = () => S.stage==='game' && (wizardHolders().length>0 || !!S.wishes?.some(w=>w.ruling==='granted'));
+const wizardMode = () => S.stage==='game' && (wizardHolders().length>0 || !!S.wishes?.some(w=>w.ruling==='granted') || !!S.wizardQueue?.some(x=>['waiting','ready','revised'].includes(x.status)));
 const why = p => p.role==='drunk' ? 'This is the Drunk' : p.role==='marionette' ? 'This is the Marionette' : p.rem.some(r=>!r.off && r.type==='drunk') ? 'They are drunk' : 'They are poisoned';
 const inPlay = k => S.players.some(p=>p.role===k || wake(p)===k);
-const sober = k => S.players.find(p=>p.alive && abilityOf(p)===k && !impaired(p));
+const sober = k => S.players.find(p=>(p.alive || retainedAbility(p)) && hasAbility(p,k) && !impaired(p));
 const evilInfo = () => S.players.length>=7 || hasFabled('toymaker');
 const demonChoose = k => ['leviathan','legion'].includes(k) ? null : k==='pukka' ? 'Choose a player to poison' : k==='alhadikhia' ? 'Choose 3 players' : 'Choose a player to kill';
 const alignNote = p => p.align && p.align!==(['minion','demon'].includes(team(p))?'evil':'good') ? ` (${p.align})` : '';
@@ -1247,7 +1252,8 @@ function kill(p,cause,force){
   p.alive = false; p.fake = false;
   if(!day) addRem(p,'diedtonight'); else { S.day.anyDied = true; if(team(p)==='outsider') S.day.outsiderDied = true; }
   log(`${p.name} dies (${cause}).`);
-  if(!has(p,'undead')) endAbility(p);
+  wizardTrigger('death',p.id);
+  if(!retainedAbility(p)) endAbility(p);
   if(hasAbility(p,'barber')) S.haircut = true;
   if(has(p,'pixiemad') && S.players.some(q=>q.alive && abilityOf(q)==='pixie')) log(`If the Pixie was "mad" about being the ${R[p.role].name}, they now have that ability. Set it on the Pixie's notes.`);
   for(const k of ['klutz','moonchild']) if(hasAbility(p,k) && !impaired(p)){
@@ -1295,11 +1301,15 @@ const levActive = () => S.players.some(p=>p.alive && p.role==='leviathan' && !im
 function execute(p){
   const d = S.day;
   d.executed = p.id;
+  delete d.tieFavor;
+  (d.executions ||= []).push(p.id);
+  if(d.extraExecution){ d.extraExecution = false; d.usedExtra = true; }
+  wizardTrigger('execution');
   addRem(p,'executed');
   log(`${p.name} is executed.`);
   S.news = `${p.name} was executed.`;
   say(`${p.name} has been executed.`);
-  if(hasAbility(p,'saint') && !impaired(p)){ p.alive=false; setWinner('Evil wins! The Saint was executed.'); return; }
+  if(hasAbility(p,'saint') && !impaired(p)){ if(p.alive) wizardTrigger('death',p.id); p.alive=false; setWinner('Evil wins! The Saint was executed.'); return; }
   if(has(p,'twin') && S.players.some(q=>q.alive && q.role==='eviltwin' && !impaired(q))){ setWinner('Evil wins! The good twin was executed.'); }
   if(p.role==='goblin' && has(p,'claimed') && !impaired(p)) setWinner('Evil wins! The Goblin claimed and was executed.');
   if(!isEvil(p) && levActive()){ S.goodExecs = (S.goodExecs||0)+1; log(`Good players executed while the Leviathan lives: ${S.goodExecs}.`); if(S.goodExecs>1) setWinner('Evil wins! More than 1 good player was executed (Leviathan).'); }
@@ -1324,6 +1334,7 @@ function toDay(){
   S.news = died.length ? `Last night ${died.map(p=>p.name).join(' and ')} died.` : 'Nobody died last night.';
   say(`Good morning, everyone. Open your eyes. ${died.length ? `${died.map(p=>p.name).join(' and ')} died in the night.` : 'Nobody died in the night.'}`);
   purge('dawn');
+  wizardTrigger('dawn');
   S.haircut = null;
   ui.show = {eyebrow:'Good morning. Last night…', big: died.length ? `${died.map(p=>p.name).join(' & ')} died` : 'Nobody died', tone:''};
   ui.tab='main'; ui.vote=null;
@@ -1332,17 +1343,18 @@ function toDay(){
 function toNight(){
   archiveGame();
   const a = alive(), d = S.day;
-  if(!d.executed && a.length===3 && a.some(p=>p.role==='mayor'&&!impaired(p))) setWinner('Good wins! Three players left, no execution, and the Mayor lives.');
-  if(!d.executed && S.players.some(p=>p.alive && p.role==='vortox' && !impaired(p))) setWinner('Evil wins! Nobody was executed while the Vortox lives.');
+  if(!d.executed && !d.executions?.length && a.length===3 && a.some(p=>p.role==='mayor'&&!impaired(p))) setWinner('Good wins! Three players left, no execution, and the Mayor lives.');
+  if(!d.executed && !d.executions?.length && S.players.some(p=>p.alive && p.role==='vortox' && !impaired(p))) setWinner('Evil wins! Nobody was executed while the Vortox lives.');
   if(levActive() && S.phase.n>=5) setWinner('Evil wins! Day 5 is over and the Leviathan lives.');
   if(d.noms?.some(x=>x.votes!=null)) log(`Votes today: ${d.noms.map(x=>`${P(x.nominee)?.name} ${x.votes??'?'}`).join(', ')}.`);
-  S.executedLast = d.executed;
+  S.executedLast = d.executed || d.executions?.at(-1) || null;
   S.lastDay = {died:!!d.anyDied, outsiderDied:!!d.outsiderDied, demonVoted:demonVoted(d), minionNominated:!!d.minionNominated};
   S.phase = {kind:'night',n:S.phase.n+1}; S.done={}; S.picked={}; S.pickedIds={}; S.night={changed:[]}; S.news=''; ui.form={}; ui.open=null; ui.vote=null; ui.savant=null; ui.stmts=null;
   if(!S.winner) say('Night falls. Everyone, close your eyes.');
   timer.running=false; timer.left=0;
   log(`Night ${S.phase.n} begins. Everyone closes their eyes.`);
   purge('dusk');
+  wizardTrigger('dusk');
   ui.tab='main';
 }
 function purge(kind){
@@ -1394,17 +1406,18 @@ function actorsFor(k){
   if(k==='barber') return ps.some(p=>p.role==='barber') ? ps.filter(isDemon) : [];
   if(k==='leviathan' || k==='legion') return ps.filter(p=>p.role===k);
   if(k==='lunatic' || k==='alchemist') return ps.filter(p=>p.role===k);
-  return ps.filter(p=>(wake(p)===k || hasAbility(p,k)) && p.role!=='lunatic');
+  return ps.filter(p=>hasAbility(p,k) && p.role!=='lunatic');
 }
 function steps(){
   const order = S.phase.n===1 ? FIRST : OTHER, out = [];
-  for(const k of order){
+  const added = [...new Set(S.players.flatMap(extraAbilities))].filter(k=>STEP[k] && OTHER.includes(k) && !order.includes(k));
+  for(const k of [...order,...added]){
     const st = stepDef(k); if(!st) continue;
     if((k==='minioninfo'||k==='demoninfo') && !evilInfo()) continue;
-    const actors = actorsFor(k);
+    const actors = actorsFor(k).filter(p=>!has(p,'wizardmute') || ['minioninfo','demoninfo','newimp','king','barber','marionette'].includes(k));
     if(!actors.length) continue;
     let skip = null;
-    if(!st.deadOk && !['minioninfo','demoninfo'].includes(k) && actors.every(p=>!p.alive && !has(p,'undead'))) skip = 'Dead';
+    if(!st.deadOk && !['minioninfo','demoninfo'].includes(k) && actors.every(p=>!p.alive && !retainedAbility(p))) skip = 'Dead';
     if(!skip && st.need) skip = st.need(actors[0], actors);
     if(!skip && KILLERS.concat(['pukka','alhadikhia']).includes(k)){
       if(S.night?.exo && actors.some(p=>p.id===S.night.exo)) skip = 'The Exorcist chose them';
@@ -1415,7 +1428,7 @@ function steps(){
   return out;
 }
 function currentStep(list){ return list.find(s=>!s.skip && !S.done[s.k]); }
-const stepActor = s => s.actors.find(p=>p.alive || has(p,'diedtonight') || has(p,'undead')) || s.actors[0];
+const stepActor = s => s.actors.find(p=>p.alive || has(p,'diedtonight') || retainedAbility(p)) || s.actors[0];
 
 function neighbours(p){
   const n=S.players.length, i=S.players.indexOf(p), res=[];
@@ -1709,7 +1722,7 @@ function pickText(pk){
 function resolvePick(t){
   const pk = ui.pick, a = P(pk.actor), st = STEP[pk.kind] ? stepDef(pk.kind) : null;
   const err = m => { ui.msg = m; render(); };
-  if(pk.kind==='voters'){ const x = S.day?.noms?.[pk.i]; if(!x || S.day.executed) { ui.pick = null; return render(); }
+  if(pk.kind==='voters'){ const x = S.day?.noms?.[pk.i]; if(!x || x.closed || S.day.executed) { ui.pick = null; return render(); }
     const ch = pk.chosen.includes(t.id) ? pk.chosen.filter(id=>id!==t.id) : [...pk.chosen, t.id];
     const ballots = {...(x.ballots || Object.fromEntries((x.voters||[]).map(id=>[id,1])))};
     if(ch.includes(t.id)){
@@ -1735,17 +1748,18 @@ function resolvePick(t){
   if(pk.kind==='exorcist' && has(t,'exorcised')) return err("The Exorcist can't choose the same player as last night.");
   if(pk.kind==='barber' && isDemon(t) && t!==a) return err("The Demon can swap themself, but not another Demon.");
   if(pk.kind==='execute' && !(t.alive && !t.fake) && pk.sure!==t.id){ ui.pick = {...pk, sure:t.id}; return err(`${t.name} is already dead. Click them again to execute them anyway (it still counts as today's execution).`); }
+  if(pk.kind==='execute' && (!S.day || S.day.executed || S.winner)) { ui.pick=null; return render(); }
   if(pk.kind==='execute') return commit(()=>{ ui.pick = null; execute(t); ui.show = {eyebrow:'The town has spoken', big:`${t.name} is executed`, tone:'evil'}; });
-  if(pk.kind==='execfail') return commit(()=>{ ui.pick = null; S.day.executed = t.id; addRem(t,'executed'); S.news = `${t.name} was executed, but nothing happened.`; log(`${t.name} is executed, but only evil players voted, so the execution fails (Legion). Nobody dies.`); });
+  if(pk.kind==='execfail') return commit(()=>{ ui.pick = null; S.day.executed = t.id; (S.day.executions ||= []).push(t.id); if(S.day.extraExecution){ delete S.day.extraExecution; S.day.usedExtra=true; } delete S.day.tieFavor; wizardTrigger('execution'); addRem(t,'executed'); S.news = `${t.name} was executed, but nothing happened.`; log(`${t.name} is executed, but only evil players voted, so the execution fails (Legion). Nobody dies.`); });
   if(pk.kind==='nominator'){
     const special = voteRule(t,'wizardnom');
     const max = special ?? (has(t,'banshee') ? 2 : deadForVoting(t) ? 0 : 1);
     if(max===0) return err(`${t.name} cannot nominate today.`);
-    if(S.day.noms.filter(x=>x.nominator===t.id).length>=max) return err(`${t.name} already nominated today.`);
+    if(S.day.noms.filter(x=>!x.closed && x.nominator===t.id).length>=max) return err(`${t.name} already nominated today.`);
     ui.pick={kind:'nominee',actor:t.id}; return render();
   }
   if(pk.kind==='nominee'){
-    if(S.day.noms.some(x=>x.nominee===t.id)) return err(`${t.name} was already nominated today.`);
+    if(S.day.noms.some(x=>!x.closed && x.nominee===t.id)) return err(`${t.name} was already nominated today.`);
     return nominate(a,t);
   }
   const n = st?.n || 1;
@@ -1764,7 +1778,7 @@ function record(kind, ts){
     (S.pickedIds ||= {})[kind] = ts.map(q=>q.id);
   }
 }
-function changed(p, k){ ((S.night ||= {}).changed ||= []).push({id:p.id, step:k}); if(p.fake && p.role!=='zombuul'){ p.fake = false; p.alive = false; log(`${p.name} only seemed dead as the Zombuul, so now they are really dead.`); } }
+function changed(p, k){ ((S.night ||= {}).changed ||= []).push({id:p.id, step:k}); if(p.fake && p.role!=='zombuul'){ p.fake = false; p.alive = false; wizardTrigger('death',p.id); log(`${p.name} only seemed dead as the Zombuul, so now they are really dead.`); } }
 function safeFrom(t, demon){
   if(has(t,'innsafe')) return 'is safe (Innkeeper)';
   if(demon && has(t,'safe')) return 'is protected by the Monk';
@@ -1934,7 +1948,8 @@ function nominate(nr,ne){
   const d = S.day;
   commit(()=>{
     ui.pick = null;
-    d.noms.push({nominator:nr.id, nominee:ne.id, votes:null});
+    d.noms.push({nominator:nr.id, nominee:ne.id, votes:null, bypass:!!d.bypassNext});
+    delete d.bypassNext;
     if(team(nr)==='minion') d.minionNominated = true;
     log(`${nr.name} nominates ${ne.name}.`);
     const nrid = nr.id, neid = ne.id;
@@ -1962,7 +1977,7 @@ function seatHTML(p,i,n){
     if(p.as && p.as!==p.role && !THINKS.includes(p.role)) marks.push(`<span class="chip info">as ${esc(R[p.as]?.name||'?')}</span>`);
     if(alignNote(p)) marks.push(`<span class="chip ${isEvil(p)?'evil':'good'}">${isEvil(p)?'Evil':'Good'}</span>`);
     if(S.stage==='game' && ndPoisoned(p)) marks.push('<span class="chip poison">Poisoned (No Dashii)</span>');
-    p.rem.forEach(m=>marks.push(`<span class="chip ${m.cls}${m.off?' off':''}" title="${esc(m.label)} · ${EXP[m.expires]}">${esc(m.label.replace(/ \(.*\)/,''))}</span>`));
+    p.rem.forEach(m=>marks.push(`<span class="chip ${m.cls}${m.off?' off':''}" title="${esc(m.label)} · ${EXP[m.expires]}">${esc(m.label.replace(/^Extra ability: /,'+ ').replace(/ \(.*\)/,''))}</span>`));
   }
   const list = S.stage==='game' && S.phase.kind==='night' ? steps() : [];
   const cur = currentStep(list);
@@ -1993,10 +2008,11 @@ function demonVoted(d = S.day){
 }
 // Who is about to die: the highest vote total that reached the threshold. A tie at the top means nobody.
 function blockOf(){
-  const noms = (S.day?.noms||[]).filter(x=>x.votes!=null && x.votes>=needed());
+  const noms = (S.day?.noms||[]).filter(x=>x.votes!=null && !x.closed && (x.bypass || x.votes>=needed()));
   if(!noms.length) return null;
   const top = Math.max(...noms.map(x=>x.votes)), at = noms.filter(x=>x.votes===top);
-  return at.length===1 ? {id:at[0].nominee, votes:top} : {id:null, votes:top};
+  const favored = at.find(x=>x.nominee===S.day?.tieFavor);
+  return {id:at.length===1 ? at[0].nominee : favored?.nominee || null, votes:top};
 }
 const dupNames = () => { const seen0 = new Set(), d = new Set(); S.players.forEach(p=>{ const k = p.name.trim().toLowerCase(); if(seen0.has(k)) d.add(p.name); seen0.add(k); }); return [...d]; };
 
@@ -2244,7 +2260,8 @@ function stepBody(s){
     parts.push(`<div class="truth">${f.ids.map(id=>{ const p = P(id), v = f.live[id]; return `<div class="row"><span style="flex:1">${esc(p.name)}</span><button class="btn small ${v==='live'?'primary':''}" data-act="alhset" data-id="${id}" data-v="live">Lives</button><button class="btn small ${v==='die'?'primary':''}" data-act="alhset" data-id="${id}" data-v="die">Dies</button></div>`; }).join('')}
       <button class="btn primary" data-act="alhres" ${f.ids.every(id=>f.live[id])&&!f.done?'':'disabled'}>Apply${f.done?'d':''}</button></div>`);
   }
-  if(s.k==='tinker') parts.push(`<div class="row"><button class="btn danger" data-act="tinkerdie" data-id="${a.id}">${ic('cross')}The Tinker dies</button></div>`);
+  if(extraAbilities(a).includes(s.k)) parts.push('<p class="muted">Added ability. Use the Wizard toolkit to adjudicate any special interactions.</p>');
+  if(s.k==='tinker') parts.push(`<div class="row">${s.actors.filter(p=>p.alive && !impaired(p)).map(p=>`<button class="btn danger" data-act="tinkerdie" data-id="${p.id}">${ic('cross')}${esc(p.name)} dies</button>`).join('')}</div>`);
   if(s.k==='moonchild'){ const t = S.players.find(p=>has(p,'moon')); if(t) parts.push(`<div class="truth">${esc(t.name)} is ${isEvil(t)?'<b>evil</b>: nothing happens':'<b>good</b>: they die'}.</div><div class="row"><button class="btn ${isEvil(t)?'':'danger'}" data-act="moonkill" data-id="${t.id}">${isEvil(t)?'Done: nobody dies':`${esc(t.name)} dies`}</button></div>`); }
   if(st.info){
     const f = formFor(s.k,a), ready = formReady(s.k, f);
@@ -2353,35 +2370,41 @@ function dayHTML(){
   if(dead.length) parts.push(`<h3>Ghost votes</h3><p class="muted" style="margin:0 0 6px">Spend a ghost vote when a dead player votes. A weighted ballot can count for several votes.</p><div class="row">${dead.map(p=>`<button class="btn small ${p.ghost?'primary':''}" data-act="ghost" data-id="${p.id}" title="${p.ghost?'Click when they use it':'Click to give it back'}">${ic('hand')}${esc(p.name)}: ${votesLabel(ghostVotes(p))}</button>`).join('')}</div>`);
   if(!S.winner){
     const blk = blockOf(), need = needed(), fg = flowergirlIn();
-    const row = (x,i) => { const v = x.votes, pass = v!=null && v>=need, on = blk?.id===x.nominee && pass;
+    const row = (x,i) => { const v = x.votes, pass = v!=null && !x.closed && (x.bypass || v>=need), on = blk?.id===x.nominee && pass;
       return `<li class="nom ${on?'on':''}"><span class="who">${esc(P(x.nominator)?.name)} <span class="muted">→</span> <b>${esc(P(x.nominee)?.name)}</b></span>
-        <span class="tallyctl">${d.executed?`<b>${v??'–'}</b>`:`<button class="x" data-act="votes" data-i="${i}" data-d="-1" aria-label="One vote fewer">${ic('minus')}</button><b>${v??'–'}</b><button class="x" data-act="votes" data-i="${i}" data-d="1" aria-label="One more vote">${ic('plus')}</button>`}</span>
+        <span class="tallyctl">${d.executed||x.closed?`<b>${v??'–'}</b>`:`<button class="x" data-act="votes" data-i="${i}" data-d="-1" aria-label="One vote fewer">${ic('minus')}</button><b>${v??'–'}</b><button class="x" data-act="votes" data-i="${i}" data-d="1" aria-label="One more vote">${ic('plus')}</button>`}</span>
         <span class="verdict">${v==null?'<span class="muted">count the hands</span>':on?'on the block':pass?(blk?.id===null&&v===blk.votes?'tied':'beaten'):'too few'}</span>
-        ${(fg || wizardMode() || x.ballots) && !d.executed?`<button class="btn small votersbtn ${ui.pick?.kind==='voters'&&ui.pick.i===i?'primary':''}" data-act="markvoters" data-i="${i}">${ic('hand')}${x.voters?`${x.voters.length} marked`:'Who voted'}</button>`:''}</li>`; };
+        ${(fg || wizardMode() || x.ballots) && !d.executed && !x.closed?`<button class="btn small votersbtn ${ui.pick?.kind==='voters'&&ui.pick.i===i?'primary':''}" data-act="markvoters" data-i="${i}">${ic('hand')}${x.voters?`${x.voters.length} marked`:'Who voted'}</button>`:''}</li>`; };
     const adjustments = S.players.filter(p=>voteRule(p,'wizardvote')!=null || voteRule(p,'wizardnom')!=null);
     if(adjustments.length) parts.push(`<h3>Player voting rules</h3><ul class="recapl">${adjustments.map(p=>`<li>${esc(p.name)} · ${votesLabel(votesPerHand(p))} per hand${voteRule(p,'wizardnom')!=null?' · '+voteRule(p,'wizardnom')+' nominations per day':''}</li>`).join('')}</ul>`);
+    if(d.bypassNext || d.tieFavor || d.extraExecution) parts.push(`<p class="warn">${[d.bypassNext?'The next nomination bypasses the vote threshold.':'',d.tieFavor?`${esc(P(d.tieFavor)?.name)} wins a tie for the block.`:'',d.extraExecution?'A second execution is available.':''].filter(Boolean).join(' ')}</p>`);
     const blkLine = !blk ? `Nobody is on the block. ${need} votes puts someone there.` : blk.id ? `<b>${esc(P(blk.id).name)}</b> is on the block with ${blk.votes}. ${blk.votes+1} replaces them; ${blk.votes} ties and frees them.` : `Tied at ${blk.votes}: nobody is on the block. ${blk.votes+1} puts someone there.`;
     parts.push(`<h3>Nominations</h3>${d.noms.length?`<ul class="noms">${d.noms.map(row).join('')}</ul>`:''}<p class="blockline">${blkLine}</p>${d.executed?'':`<button class="btn small" data-act="pick" data-kind="nominator">${ic('hand')}New nomination</button>`}`);
     if(fg){ const dv = demonVoted(), how = d.dvManual!=null ? 'your answer' : dv!=null ? 'from the voters you marked' : 'not recorded';
       parts.push(`<div class="fgrow"><span>Flowergirl: did the Demon vote today? <b>${dv==null?'–':dv?'Yes':'No'}</b> <span class="muted">(${how})</span></span><span class="row"><button class="btn small ${d.dvManual===true?'primary':''}" data-act="dv" data-v="yes">Yes</button><button class="btn small ${d.dvManual===false?'primary':''}" data-act="dv" data-v="no">No</button>${d.dvManual!=null?'<button class="btn small" data-act="dv" data-v="auto">Clear</button>':''}</span></div>`); }
   }
-  const slayer = S.players.find(p=>p.alive && wake(p)==='slayer' && !p.rem.some(r=>r.type==='noability'));
+  const slayer = S.players.find(p=>(p.alive || has(p,'wizarddead')) && hasAbility(p,'slayer') && !p.rem.some(r=>r.type==='noability'));
   if(slayer) parts.push(`<h3>Slayer</h3><button class="btn small" data-act="pick" data-kind="slayer" data-actor="${slayer.id}">${ic('target')}${esc(slayer.name)} shoots someone</button>`);
-  const psy = S.players.find(p=>p.alive && wake(p)==='psychopath');
+  const psy = S.players.find(p=>(p.alive || has(p,'wizarddead')) && hasAbility(p,'psychopath'));
   if(psy && !d.psycho && !d.executed) parts.push(`<h3>Psychopath</h3><p class="muted">Before nominations, ${esc(psy.name)} may publicly kill a player.</p><button class="btn small" data-act="pick" data-kind="psychopath" data-actor="${psy.id}">${ic('target')}${esc(psy.name)} kills someone</button>`);
   if(d.rosh && P(d.rosh)?.alive) parts.push(`<h3>Roshambo</h3><p class="muted">${esc(P(d.rosh).name)} (Psychopath) plays rock-paper-scissors with their nominator.</p><div class="row"><button class="btn danger" data-act="rosh" data-v="lose">${ic('cross')}They lost: they die</button><button class="btn" data-act="rosh" data-v="win">They won: they live</button></div>`);
   const mads = S.players.filter(p=>p.rem.some(r=>['cmad','hmad','cursed','claimed'].includes(r.type)));
   if(mads.length) parts.push(`<h3>Watch today</h3><ul class="recapl">${mads.map(p=>`<li>${esc(p.name)}: ${p.rem.filter(r=>['cmad','hmad','cursed','claimed'].includes(r.type)).map(r=>esc(r.label)).join(', ')}</li>`).join('')}</ul>${mads.some(p=>has(p,'cmad'))?'<p class="muted">Cerenovus: if they don\'t act mad, you may execute them (Execute someone). Nobody has to vote.</p>':''}${mads.some(p=>has(p,'hmad'))?'<p class="muted">Harpy: if they don\'t act mad, you may kill them, the 2nd player, or both (Mark dead on their seat).</p>':''}`);
-  const dayAb = S.players.filter(p=>p.alive && wake(p)!=='wizard' && R[wake(p)]?.day && !(R[wake(p)].once && has(p,'noability')) && !(wake(p)==='juggler' && S.phase.n>1));
+  const extraTinkers=S.players.filter(p=>p.alive && extraAbilities(p).includes('tinker') && !impaired(p));
+  if(extraTinkers.length) parts.push(`<h3>Added Tinker abilities</h3><div class="row">${extraTinkers.map(p=>`<button class="btn small" data-act="tinkerdie" data-id="${p.id}">${esc(p.name)} dies</button>`).join('')}</div>`);
+  const extraDay = S.players.flatMap(p=>!has(p,'wizardmute') && (p.alive || retainedAbility(p)) ? extraAbilities(p).filter(k=>k!==wake(p) && R[k]?.day).map(k=>`<li>${esc(p.name)} (${esc(R[k].name)}) ${esc(R[k].day)}</li>`) : []);
+  if(extraDay.length) parts.push(`<h3>Added day abilities</h3><ul class="recapl">${extraDay.join('')}</ul>`);
+  const dayAb = S.players.filter(p=>(p.alive || has(p,'wizarddead')) && !has(p,'wizardmute') && wake(p)!=='wizard' && R[wake(p)]?.day && !(R[wake(p)].once && has(p,'noability')) && !(wake(p)==='juggler' && S.phase.n>1));
   if(dayAb.length) parts.push(`<h3>Day abilities</h3><ul class="recapl">${dayAb.map(p=>`<li>${esc(p.name)} (${R[wake(p)].name}) ${esc(R[wake(p)].day)}${R[wake(p)].once?` <button class="btn small" data-act="usedonce" data-id="${p.id}">Mark used</button>`:''}${wake(p)==='goblin'&&!has(p,'claimed')?` <button class="btn small" data-act="addrem" data-id="${p.id}" data-type="claimed">They claimed Goblin</button>`:''}${wake(p)==='savant'?` <button class="btn small" data-act="savant" data-id="${p.id}">${ui.savant?.id===p.id?'Another pair':'Suggest 2 statements'}</button>`:''}${ui.savant?.id===p.id?savantHTML():''}</li>`).join('')}</ul>`);
   parts.push(`<h3>True and false statements</h3>${ui.stmts ? stmtHTML() : `<div class="row"><button class="btn small" data-act="stmts">${ic('book')}Ideas for the Savant, Artist or anyone</button></div>`}`);
   if(S.players.some(p=>p.role==='leviathan' && p.alive)) parts.push(`<p class="warn">Leviathan: ${S.goodExecs||0} good player${S.goodExecs===1?'':'s'} executed (2 means evil wins). ${S.phase.n>=5?'This is day 5: evil wins tonight unless the Leviathan dies.':`Evil wins after day 5 (this is day ${S.phase.n}).`}</p>`);
   if(S.players.some(p=>p.role==='vortox' && p.alive && !impaired(p))) parts.push('<p class="warn">Vortox: if nobody is executed today, evil wins.</p>');
   if(a===3 && S.players.some(p=>p.alive&&p.role==='mayor'&&!impaired(p))) parts.push('<p class="warn">Three players left and the Mayor lives: if nobody is executed today, good wins.</p>');
   parts.push('<h3>End of day</h3>');
-  if(d.executed) parts.push(`<p>${esc(P(d.executed).name)} was executed.</p>`);
-  else if(!S.winner && blockOf()?.id) parts.push(`<div class="row"><button class="btn danger big" style="flex:1" data-act="execute" data-id="${blockOf().id}">${ic('cross')}Execute ${esc(P(blockOf().id).name)}</button><button class="btn" data-act="pick" data-kind="execute">Someone else</button></div>`);
-  else if(!S.winner) parts.push(`<div class="row"><button class="btn danger big" style="flex:1" data-act="pick" data-kind="execute">${ic('cross')}Execute someone</button>${S.players.some(p=>p.alive && p.role==='legion')?`<button class="btn" data-act="pick" data-kind="execfail">Execution fails</button>`:''}</div>`);
+  if(d.executions?.length) parts.push(`<p>Executed today · ${d.executions.map(id=>esc(P(id)?.name)).join(', ')}</p>`);
+  if(d.executed && !d.executions?.length) parts.push(`<p>${esc(P(d.executed).name)} was executed.</p>`);
+  else if(!d.executed && !S.winner && blockOf()?.id) parts.push(`<div class="row"><button class="btn danger big" style="flex:1" data-act="execute" data-id="${blockOf().id}">${ic('cross')}Execute ${esc(P(blockOf().id).name)}</button><button class="btn" data-act="pick" data-kind="execute">Someone else</button></div>`);
+  else if(!d.executed && !S.winner) parts.push(`<div class="row"><button class="btn danger big" style="flex:1" data-act="pick" data-kind="execute">${ic('cross')}Execute someone</button>${S.players.some(p=>p.alive && p.role==='legion')?`<button class="btn" data-act="pick" data-kind="execfail">Execution fails</button>`:''}</div>`);
   parts.push(`<div style="margin-top:8px"><button class="btn ${d.executed?'primary':''} big" data-act="advance">${ic('moon')}${d.executed?'':'No execution: '}Night falls</button></div>`);
   parts.push(`<h3>Today so far</h3>${phaseRecap(phaseLabel())}`);
   return parts.join('');
@@ -2394,6 +2417,101 @@ function savantHTML(){
     <div class="row"><button class="btn small primary" data-act="savantshow">${ic('eye')}Show the Savant</button><button class="btn small" data-act="savant" data-id="${v.id}">Try another pair</button><button class="btn small" data-act="stmtsfor" data-id="${v.id}">More ideas</button><button class="btn small" data-act="savantclear">Close</button></div>
     <div class="muted" style="font-size:.8rem">Suggestions only. You can say anything you like.</div></div>`;
 }
+const WIZARD_TRIGGERS = {now:'Ready now',dawn:'Next dawn',dusk:'Next dusk',death:'When the selected player dies',execution:'After the next execution'};
+function wizardTrigger(event,target){
+  for(const item of S.wizardQueue||[]){
+    if(item.status==='waiting' && item.trigger===event && (event!=='death' || item.target===target)) item.status='ready';
+  }
+}
+function wizardBatchError(effects){
+  if(!effects.length) return 'Add at least one player change.';
+  if(new Set(effects.map(e=>e.target+':'+(e.rule||'effect'))).size!==effects.length) return 'Include each change once per player.';
+  for(const e of effects){
+    const error=e.rule ? wizardVotingError(e) : wizardEffectError(e,true);
+    if(error) return P(e.target)?.name+': '+error;
+  }
+  const byPlayer=new Map(effects.filter(e=>!e.rule).map(e=>[e.target,e]));
+  const remaining=S.players.some(p=>{
+    const e=byPlayer.get(p.id), isAlive=e?.life==='revive' || (p.alive && e?.life!=='kill');
+    return isAlive && R[e?.character || p.role]?.team==='demon';
+  });
+  if(!remaining && !S.winner && S.players.some(p=>p.alive && isDemon(p)) && !effects.some(e=>e.life==='kill' && isDemon(P(e.target)) && R[e.character || P(e.target).role]?.team==='demon'))
+    return 'Add a replacement Demon to this batch.';
+}
+function wizardToolkitHTML(){
+  const players = '<option value="">Choose a player…</option>'+S.players.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
+  const trigger = `<label class="f">When<select name="trigger">${Object.entries(WIZARD_TRIGGERS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></label><label class="f">Player whose death triggers it<select name="triggerTarget">${players}</select></label>`;
+  const duration = '<label class="f">Duration<select name="expires"><option value="never">Until removed</option><option value="dawn">Until dawn</option><option value="dusk">Until dusk</option></select></label>';
+  const purpose = '<label class="f">Record as<select name="purpose"><option value="effect">Storyteller ruling or wish effect</option><option value="price">Price or balancing ruling</option></select></label>';
+  const form = (id,fields,button)=>`<form id="${id}">${fields}<button class="btn small primary">${button}</button><p class="warn" data-wizard-error role="alert" hidden></p></form>`;
+  const description = e=>e.rule ? [P(e.target)?.name,REM[e.rule]?.label||'Ghost vote bank',e.count||'default',e.purpose==='price'?'price':''].filter(Boolean).join(' · ') : [P(e.target)?.name,R[e.character]?.name,e.life==='revive'?'resurrect':e.life==='kill'?'kill':'',e.alignment,REM[e.reminder]?.label,e.purpose==='price'?'price':''].filter(Boolean).join(' · ');
+  const draft = ui.wizardBatch||[], queue = (S.wizardQueue||[]).filter(x=>['waiting','ready'].includes(x.status));
+  return `<details class="wizard-voting" ${draft.length||queue.length?'open':''}><summary>Batch changes and scheduled effects</summary>
+    <p class="muted">Use Add to batch under Apply an effect. Review the changes here, apply them together, or schedule them for your approval.</p>
+    ${form('wizardSwap',`<label class="f">First player<select name="first" required>${players}</select></label><label class="f">Second player<select name="second" required>${players}</select></label>`,'Add character swap to batch')}
+    ${draft.length?`<ul class="recapl">${draft.map(e=>`<li>${esc(description(e))} <button class="btn small" data-act="wizardunstage" data-id="${esc(e.target)}" data-rule="${esc(e.rule||'')}">Remove</button></li>`).join('')}</ul>
+    ${form('wizardBatch',trigger,'Apply or schedule batch')}`:'<p class="muted">No changes in the batch.</p>'}
+    ${queue.map(x=>`<div class="tip"><div><b>${x.status==='ready'?'Ready':esc(WIZARD_TRIGGERS[x.trigger])}</b>${x.trigger==='death'?' · '+esc(P(x.target)?.name):''}
+    <div>${x.kind==='card'?'Private card for '+esc(P(x.recipient)?.name):x.effects.map(e=>esc(description(e))).join('<br>')}</div></div>
+    <div class="row">${x.status==='ready'?`<button class="btn small primary" data-act="wizardrun" data-id="${esc(x.id)}">${x.kind==='card'?'Pass screen':'Apply batch'}</button>`:''}<button class="btn small" data-act="wizardedit" data-id="${esc(x.id)}">Revise</button><button class="btn small" data-act="wizardskip" data-id="${esc(x.id)}">Skip</button></div></div>`).join('')}
+    </details>
+    <details class="wizard-voting"><summary>Ability changes</summary><p class="muted">Added abilities appear in the Grimoire and supported night steps. Adjudicate unusual combinations yourself.</p>
+    ${form('wizardAbility',`<label class="f">Player<select name="target">${players}</select></label><label class="f">Change<select name="rule"><option value="grant">Add an ability</option><option value="remove">Remove an added ability</option><option value="keep">Keep abilities while dead</option><option value="mute">Suppress abilities</option><option value="restore">Restore suppressed abilities</option></select></label><label class="f">Ability to add or remove<select name="character"><option value="">Choose an ability…</option>${charOpts('',Object.keys(R))}</select></label><label><input type="checkbox" name="everyone" value="yes"> Apply to everyone</label>${duration}${purpose}`,'Set ability rule')}
+    </details>
+    <details class="wizard-voting" ${ui.wizardCardDraft?'open':''}><summary>Private information cards</summary>
+    ${form('wizardCard',`<label class="f">Recipient<select name="target" required>${players.replace('value="'+esc(ui.wizardCardDraft?.recipient)+'"','value="'+esc(ui.wizardCardDraft?.recipient)+'" selected')}</select></label><label class="f">Message<textarea name="message" maxlength="1000" rows="3">${esc(ui.wizardCardDraft?.message||'')}</textarea></label><label class="f">Include<select name="include"><option value="">Message only</option><option value="roles" ${ui.wizardCardDraft?.include==='roles'?'selected':''}>Selected players’ true characters</option><option value="grimoire" ${ui.wizardCardDraft?.include==='grimoire'?'selected':''}>Full Grimoire</option></select></label><label class="f">Players to reveal<select name="reveal" multiple size="4">${S.players.map(p=>`<option value="${esc(p.id)}" ${ui.wizardCardDraft?.reveal?.includes(p.id)?'selected':''}>${esc(p.name)}</option>`).join('')}</select></label>${trigger}`,'Prepare private card')}
+    </details>
+    ${!night()? `<details class="wizard-voting"><summary>One-off day rulings</summary>
+    ${form('wizardException',`<label class="f">Ruling<select name="rule"><option value="bypass">Next nomination bypasses the vote threshold</option><option value="tie">Favor a player if tied for the block</option><option value="extra">Allow a second execution today</option><option value="clear">Clear unused exceptions</option></select></label><label class="f">Player favored in a tie<select name="target">${players}</select></label>${purpose}`,'Set day ruling')}
+    </details>`:''}`;
+}
+function queueWizardItem(fields){
+  if(!wizardMode()) return 'Wizard controls are unavailable.';
+  if(!Object.hasOwn(WIZARD_TRIGGERS,fields.trigger)) return 'Choose a trigger.';
+  if(fields.trigger==='death' && !P(fields.triggerTarget)?.alive) return 'Choose a living player for the death trigger.';
+  commit(()=>{
+    (S.wizardQueue ||= []).push({...fields,id:uid(),status:fields.trigger==='now'?'ready':'waiting',target:fields.triggerTarget});
+    log('Wizard toolkit: prepared '+(fields.kind==='card'?'a private card.':'a scheduled batch.'));
+  });
+}
+function wizardAbilityRule({target,rule,character,everyone,expires,purpose}){
+  const players=everyone ? S.players : [P(target)].filter(Boolean);
+  if(!players.length) return 'Choose a player or apply to everyone.';
+  if(!['grant','remove','keep','mute','restore'].includes(rule) || !['never','dawn','dusk'].includes(expires)) return 'Choose an ability rule and duration.';
+  if(['grant','remove'].includes(rule) && !TEAMS[R[character]?.team]) return 'Choose an ability.';
+  commit(()=>{
+    const type=({grant:'wizardability',remove:'wizardability',keep:'wizarddead',mute:'wizardmute',restore:'wizardmute'})[rule];
+    for(const p of players){
+      p.rem=p.rem.filter(r=>r.type!==type || (type==='wizardability' && r.character!==character));
+      if(!['remove','restore'].includes(rule)) addRem(p,type,{expires,character,label:type==='wizardability'?'Extra ability: '+R[character].name:REM[type].label});
+    }
+    log(`Wizard ${purpose==='price'?'price':'ruling'}: updated abilities for ${players.map(p=>p.name).join(', ')}.`);
+  });
+}
+function wizardException({rule,target,purpose}){
+  const d=S.day;
+  if(night() || !d || S.winner) return 'Day rulings are available during an active day.';
+  if(rule==='tie' && !P(target)) return 'Choose a player to favor in a tie.';
+  if(rule==='extra' && (!d.executed || d.usedExtra || d.rosh)) return 'Allow a second execution after the first execution resolves.';
+  if(!['bypass','tie','extra','clear'].includes(rule)) return 'Choose a day ruling.';
+  commit(()=>{
+    if(rule==='bypass') d.bypassNext=true;
+    if(rule==='tie') d.tieFavor=target;
+    if(rule==='extra'){
+      d.extraExecution=true;
+      d.executions ||= [d.executed];
+      d.executed=null;
+      d.noms.forEach(x=>x.closed=true);
+      delete d.tieFavor;
+    }
+    if(rule==='clear'){
+      delete d.bypassNext; delete d.tieFavor;
+      if(d.extraExecution){ d.executed=d.executions?.at(-1)||null; delete d.extraExecution; }
+    }
+    log(`Wizard ${purpose==='price'?'price':'ruling'}: updated today’s execution rules.`);
+  });
+}
+
 function wizardHTML(){
   const holders = wizardHolders(), available = holders.filter(canWish);
   const wishes = S.wishes || [];
@@ -2401,7 +2519,8 @@ function wizardHTML(){
     <div>${esc(w.wish)}</div>${w.price?`<div>Price · ${esc(w.price)}</div>`:''}${w.clue?`<div>Clue · ${esc(w.clue)}</div><button class="btn small" data-act="wizardclue" data-id="${esc(w.id)}">${ic('eye')}Show clue</button>`:''}</li>`).join('');
   return `<section class="wizard-tools" aria-labelledby="wizard-title">
     <h2 id="wizard-title" tabindex="-1">Wizard</h2>
-    <p class="muted">Storyteller only. Apply wish effects and prices when they take effect.</p>
+    <p class="muted">Storyteller only. Use these controls whenever you need to make a ruling.</p>
+    ${wizardToolkitHTML()}
     ${available.length ? `<form id="wizardWish">
       <h3>Record a wish</h3>
       <label class="f">Wizard<select name="actor">${available.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('')}</select></label>
@@ -2420,7 +2539,7 @@ function wizardHTML(){
       <label class="f">Alignment<select name="alignment"><option value="">Keep current team</option><option value="good">Good</option><option value="evil">Evil</option></select></label>
       <label class="f">Reminder<select name="reminder"><option value="">No reminder</option><option value="drunk">Drunk until removed</option><option value="wizardpoison">Poisoned until removed</option><option value="wizardlife">Extra life against ordinary death</option><option value="custom">Custom reminder</option></select></label>
       <label class="f">Custom reminder text (optional)<input type="text" name="label" maxlength="120"></label>
-      <button class="btn small primary">Apply effect</button><p class="warn" data-wizard-error role="alert" hidden></p>
+      <div class="row"><button class="btn small primary">Apply effect</button><button class="btn small" name="action" value="stage">Add to batch</button></div><p class="warn" data-wizard-error role="alert" hidden></p>
     </form>
     <details class="wizard-voting">
       <summary>Voting and nominations</summary>
@@ -2431,7 +2550,7 @@ function wizardHTML(){
         <label class="f">Change<select name="rule"><option value="ghost">Ghost votes in bank</option><option value="wizardvote">Votes per raised hand</option><option value="wizardnom">Nominations per day</option></select></label>
         <label class="f">Amount<input type="number" name="count" min="0" max="${voteLimit}" step="1" placeholder="Blank restores the default"></label>
         <label class="f">Duration for voting and nomination rules<select name="expires"><option value="never">Until reset</option><option value="dusk">Until dusk</option><option value="dawn">Until dawn</option></select></label>
-        <button class="btn small primary">Set player rule</button><p class="warn" data-wizard-error role="alert" hidden></p>
+        <div class="row"><button class="btn small primary">Set player rule</button><button class="btn small" name="action" value="stage">Add voting rule to batch</button></div><p class="warn" data-wizard-error role="alert" hidden></p>
       </form>
       <form id="wizardThreshold">
         <label class="f">Record as<select name="purpose"><option value="effect">Wish effect</option><option value="price">Price or balancing ruling</option></select></label>
@@ -2468,7 +2587,7 @@ function setPlayerRole(p, role){
   S.chosen = [...new Set(S.players.map(q=>q.role).filter(Boolean))];
 }
 
-function applyWizardEffect({target,life,character,alignment,reminder='',label='',purpose='effect'}){
+function wizardEffectError({target,life,character,alignment,reminder='',label=''}, batch=false){
   const p = P(target);
   if(!wizardMode() || !p?.role) return 'Choose a player in this game.';
   if((character && !TEAMS[R[character]?.team]) || !['','revive','kill'].includes(life) || !['','good','evil'].includes(alignment)) return 'Choose a valid effect.';
@@ -2479,39 +2598,64 @@ function applyWizardEffect({target,life,character,alignment,reminder='',label=''
   if(!life && !roleChange && !alignChange && !reminder) return 'Choose an effect or reminder.';
   if(life==='revive' && p.alive && !p.fake) return 'This player is already alive.';
   if(life==='kill' && !p.alive) return 'This player is already dead.';
-  if(roleChange && p.alive && isDemon(p) && R[character].team!=='demon' && !S.winner && !alive().some(q=>q!==p && isDemon(q)))
+  if(!batch && roleChange && p.alive && isDemon(p) && R[character].team!=='demon' && !S.winner && !alive().some(q=>q!==p && isDemon(q)))
     return 'Make the replacement Demon first. This is the last living Demon.';
-  const record = t => log(`Wizard ${purpose==='price'?'price':'effect'}: ${t}`);
-  commit(()=>{
-    if(life==='revive'){ revivePlayer(p); record(`${p.name} comes back to life.`); }
-    if(roleChange){
+}
+function applyWizardEffect(effect){
+  const error = wizardEffectError(effect);
+  if(error) return error;
+  commit(()=>applyWizardEffects([effect]));
+}
+function applyWizardEffects(effects){
+  const wasDemon=S.players.some(p=>p.alive && isDemon(p));
+  const revival = effects.filter(e=>e.life==='revive');
+  const deaths = effects.filter(e=>e.life==='kill');
+  const record = (e,t) => log(`Wizard ${e.purpose==='price'?'price':'effect'}: ${t}`);
+  for(const e of revival){
+    const p=P(e.target);
+    revivePlayer(p); record(e,`${p.name} comes back to life.`);
+  }
+  for(const e of effects){
+    if(e.rule) continue;
+    const {target,character,alignment,reminder,label} = e;
+    const p=P(target);
+    if(character && character!==p.role){
       if(p.alive) endAbility(p);
       p.align = isEvil(p) ? 'evil' : 'good';
       p.rem = p.rem.filter(r=>!['noability','zombfirst','becameimp','undead'].includes(r.type));
       setPlayerRole(p, character);
       changed(p,'wizard');
-      record(`${p.name} becomes the ${R[character].name}.`);
+      record(e,`${p.name} becomes the ${R[character].name}.`);
     }
-    if(alignChange){ p.align = alignment; record(`${p.name} becomes ${alignment}.`); }
+    if(alignment){ p.align = alignment; record(e,`${p.name} becomes ${alignment}.`); }
     if(reminder){
       const labelText = reminder==='custom' ? label : reminder==='drunk' ? 'Drunk (Wizard)' : REM[reminder].label;
       if(reminder==='wizardlife' || !p.rem.some(r=>r.type===reminder && r.label===labelText && !r.off)) addRem(p,reminder,{label:labelText});
-      record(`added a reminder to ${p.name}.`);
+      record(e,`added a reminder to ${p.name}.`);
     }
-    if(life==='kill') kill(p,purpose==='price'?'Wizard price':'Wizard effect',true);
-  });
+  }
+  for(const e of deaths) kill(P(e.target),e.purpose==='price'?'Wizard price':'Wizard effect',true);
+  for(const e of effects.filter(e=>e.rule)) changeWizardVoting(e);
+  if(wasDemon && !S.players.some(p=>p.alive && isDemon(p))) checkWin();
 }
 
-function applyWizardVoting({target,rule,count,expires,purpose='effect'}, town=false){
+function wizardVotingError({target,rule,count,expires},town=false){
   if(!wizardMode()) return 'Wizard controls are unavailable.';
   const n = count==='' ? null : Number(count);
   if(n!=null && (!Number.isInteger(n) || n<(town?1:0) || n>voteLimit)) return 'Enter a whole number in the allowed range.';
   if(!['never','dusk','dawn'].includes(expires)) return 'Choose a duration.';
   const p = P(target);
   if(!town && (!p || !['ghost','wizardvote','wizardnom'].includes(rule))) return 'Choose a player and rule.';
+}
+function applyWizardVoting(rule,town=false){
+  const error=wizardVotingError(rule,town);
+  if(error) return error;
+  commit(()=>changeWizardVoting(rule,town));
+}
+function changeWizardVoting({target,rule,count,expires,purpose='effect'},town=false){
+  const n=count===''?null:Number(count), p=P(target);
   const record = t => log(`Wizard ${purpose==='price'?'price':'effect'}: ${t}`);
-  commit(()=>{
-    if(town){
+  if(town){
       if(n===null) delete S.voteThreshold;
       else S.voteThreshold = {count:n,expires};
       record(n===null ? 'The usual vote threshold is restored.' : `The town now needs ${votesLabel(n)} to put someone on the block.`);
@@ -2523,7 +2667,6 @@ function applyWizardVoting({target,rule,count,expires,purpose='effect'}, town=fa
       if(n!=null) addRem(p,rule,{count:n,expires,label:`${REM[rule].label}: ${n}`});
       record(n===null ? `${p.name}: reset ${REM[rule].label.toLowerCase()}.` : `${p.name}: ${REM[rule].label.toLowerCase()} set to ${n}.`);
     }
-  });
 }
 
 function playerHTML(){
@@ -2581,7 +2724,7 @@ function menuHTML(){
   const items = [];
   if(S.stage==='game'){
     items.push(p.alive ? `<button data-act="killp" data-id="${p.id}">${ic('cross')}Mark dead</button>` : `<button data-act="revive" data-id="${p.id}">${ic('heart')}Revive</button><button data-act="ghost" data-id="${p.id}">${ic('hand')}${ghostVotes(p)?'Spend 1 of '+votesLabel(ghostVotes(p)):'Restore 1 ghost vote'}</button>`);
-    if(S.phase.kind==='day' && p.alive && !S.day.executed) items.push(`<button data-act="execute" data-id="${p.id}">${ic('cross')}Execute now</button>`);
+    if(S.phase.kind==='day' && p.alive && !S.day.executed && !S.winner) items.push(`<button data-act="execute" data-id="${p.id}">${ic('cross')}Execute now</button>`);
     items.push('<hr>');
     quickTokens().forEach(t=>{ const r = p.rem.find(x=>x.type===t);
       items.push(r ? `<button data-act="rmrem" data-id="${p.id}" data-r="${r.id}">${ic('minus')}Remove ${REM[t].label}</button>` : `<button data-act="addrem" data-id="${p.id}" data-type="${t}">${ic('plus')}${REM[t].label}</button>`); });
@@ -2597,8 +2740,8 @@ function menuHTML(){
 function duskWarnings(){
   const w = [], d = S.day||{}, a = alive();
   if(S.winner || S.phase.kind!=='day') return w;
-  if(!d.executed && a.length===3 && a.some(p=>p.role==='mayor' && !impaired(p))) w.push('Good wins: 3 players live, nobody was executed, and the Mayor is alive.');
-  if(!d.executed && S.players.some(p=>p.alive && p.role==='vortox' && !impaired(p))) w.push('Evil wins: nobody was executed while the Vortox lives.');
+  if(!d.executed && !d.executions?.length && a.length===3 && a.some(p=>p.role==='mayor' && !impaired(p))) w.push('Good wins: 3 players live, nobody was executed, and the Mayor is alive.');
+  if(!d.executed && !d.executions?.length && S.players.some(p=>p.alive && p.role==='vortox' && !impaired(p))) w.push('Evil wins: nobody was executed while the Vortox lives.');
   if(levActive() && S.phase.n>=5) w.push('Evil wins: day 5 is over and the Leviathan lives.');
   return w;
 }
@@ -2729,17 +2872,17 @@ function dockHTML(){
 }
 
 const SPY_HIDE = ['diedtonight','executed','bydemon','becameimp','custom'];
-function spyHTML(){
+function spyHTML(message){
   const n = S.players.length;
   const seats = S.players.map((p,i)=>{ const ang = -Math.PI/2 + i*2*Math.PI/n, x = 50+40*Math.cos(ang), y = 50+40*Math.sin(ang);
     const chips = [THINKS.includes(p.role)?`<span class="chip drunk">thinks ${esc(R[p.shown]?.name||'?')}</span>`:'', ndPoisoned(p)?'<span class="chip poison">Poisoned</span>':'',
       ...p.rem.filter(r=>!SPY_HIDE.includes(r.type)).map(r=>`<span class="chip ${r.cls}">${esc(r.label)}</span>`)].join('');
     return `<div class="ss ${p.alive&&!p.fake?'':'dead'}" style="left:${x}%;top:${y}%"><span class="tk">${tokenSVG(p.role)}</span><b>${esc(p.name)}${p.alive&&!p.fake?'':' (dead)'}</b><span class="chips">${chips}</span></div>`; }).join('');
-  return `<button class="show" style="animation:none" data-act="hideshow" aria-label="Hide the grimoire"><div class="spyg">${seats}<div class="mid">Grimoire</div></div><div class="hint">Click anywhere to hide</div></button>`;
+  return `<button class="show" style="animation:none" data-act="hideshow" aria-label="Hide the grimoire"><div class="spyg">${seats}<div class="mid">${message?esc(message):'Grimoire'}</div></div><div class="hint">Click anywhere to hide</div></button>`;
 }
 function overlayHTML(){
   const c = ui.show; if(!c) return ui.preview ? previewHTML() : '';
-  if(c.spy) return spyHTML();
+  if(c.spy) return spyHTML(c.message);
   if(c.qr) return `<button class="show" data-act="hideshow" aria-label="Hide the QR code"><div class="eyebrow">Scan with your phone camera</div>${qrSVG(phoneLink())}<div class="ssub">Pick your name, then tap to see your character when the Storyteller says so.</div><div class="hint">Click anywhere to hide</div></button>`;
   if(c.final){
     const rows = S.players.map(p=>`<span class="fr ${team(p)}"><span class="mini" style="width:44px;height:44px">${tokenSVG(p.role)}</span><b>${esc(p.name)}</b>${esc(R[p.role].name)}${THINKS.includes(p.role)?`<small>thought they were the ${esc(R[p.shown]?.name||'?')}</small>`:''}${alignNote(p)?`<small>was ${isEvil(p)?'evil':'good'}</small>`:''}${p.start&&p.start!==p.role?`<small>started as the ${esc(R[p.start].name)}</small>`:''}${p.alive?'':'<small>died</small>'}</span>`).join('');
@@ -2775,6 +2918,8 @@ function render(){
     b.push(`<div class="banner pick"><span>Nobody alive is the Demon. If that's a mistake, fix a character on the Player tab or press Undo.</span><span class="row"><button class="btn small" data-act="goodwins">Good wins</button><button class="btn small" data-act="undo">Undo</button></span></div>`);
   (ui.rulings||[]).forEach(r=>b.push(`<div class="banner pick ruling"><span>${ic('book')}<b>Your call:</b> ${esc(r.text)}</span><span class="row">${r.opts.map((o,i)=>`<button class="btn small ${i===0?'primary':''}" data-act="rule" data-id="${r.id}" data-i="${i}" ${i===0?'title="What the rules say"':''}>${esc(o.label)}</button>`).join('')}</span></div>`));
   if(ui.pick) b.push(`<div class="banner pick"><span>${ic('target')}${esc(pickText(ui.pick))}</span>${['starpass','mayor'].includes(ui.pick.kind)?'':`<button class="btn small ${ui.pick.kind==='voters'?'primary':''}" data-act="cancelpick">${ui.pick.kind==='voters'?'Done':'Cancel'}</button>`}</div>`);
+  if(wizardMode() && ui.tab!=='wizard' && S.wizardQueue?.some(x=>x.status==='ready'))
+    b.push('<div class="banner pick"><span>A scheduled Wizard action is ready.</span><button class="btn small" data-act="tab" data-k="wizard">Open Wizard</button></div>');
   if(ui.msg) b.push(`<div class="toast"><span>${esc(ui.msg)}</span><button class="x" data-act="dismiss" aria-label="Dismiss">✕</button></div>`);
   document.getElementById('banners').innerHTML = b.join('');
   if(ui.msg && ui.msg!==lastMsg){ const m = lastMsg = ui.msg; clearTimeout(msgTimer); msgTimer = setTimeout(()=>{ if(ui.msg===m){ ui.msg = null; lastMsg = null; document.querySelector('.toast')?.remove(); } }, 7000); }
@@ -2789,8 +2934,10 @@ function render(){
     : ui.tab==='wizard' ? wizardHTML() : ui.tab==='log' ? summaryHTML()
     : !game ? setupHTML() : S.phase.kind==='night' ? nightHTML() : dayHTML();
   document.getElementById('side').innerHTML = `<div class="card"><div class="tabs">${tabs.map(([k,l])=>`<button class="tab ${ui.tab===k?'on':''}" data-act="tab" data-k="${k}">${l}</button>`).join('')}</div>${body}</div>${game?effectHTML():''}`;
+  const selectedTab=document.querySelector('#side .tabs .on');
+  if(ui.tab==='wizard' && selectedTab) selectedTab.parentElement.scrollLeft=selectedTab.offsetLeft-selectedTab.parentElement.firstElementChild.offsetLeft;
   document.getElementById('overlay').innerHTML = overlayHTML();
-  for(const el of document.querySelectorAll('.wrap,#dock')) el.inert = !!ui.show?.clue;
+  for(const el of document.querySelectorAll('.wrap,#dock')) el.inert = !!(ui.show?.clue || ui.show?.wizardPass || ui.show?.wizardPrivate);
   document.getElementById('menu').innerHTML = menuHTML();
   saveUi();
   document.getElementById('recap').innerHTML = recapHTML();
@@ -2844,7 +2991,7 @@ function openGame(text){
   const st = d?.app==='tb-grimoire' ? d.state : (d?.players && d?.stage ? d : null);
   if(st && !st.script) st.script = st.teensy ? 'teensy' : 'tb';
   if(!st || !Array.isArray(st.players)){ ui.msg = "That file isn't a saved grimoire game."; return render(); }
-  commit(()=>{ S = st; ui.pick=null; ui.vote=null; ui.recap=null; ui.pop=null; ui.show=null; ui.form={}; ui.open=null; ui.tab='main'; log(`Game opened from a file${d.savedAt?` saved ${new Date(d.savedAt).toLocaleString()}`:''}.`); });
+  commit(()=>{ S = st; ui.pick=null; ui.vote=null; ui.recap=null; ui.pop=null; ui.show=null; ui.wizardBatch=[]; ui.wizardCardDraft=null; ui.form={}; ui.open=null; ui.tab='main'; log(`Game opened from a file${d.savedAt?` saved ${new Date(d.savedAt).toLocaleString()}`:''}.`); });
   ensureConsistent(); render();
 }
 function moveSeat(p, dir){
@@ -2884,15 +3031,55 @@ document.addEventListener('change', e=>{
 });
 
 document.addEventListener('submit', e=>{
-  if(phoneMode || !['wizardWish','wizardEffect','wizardVoting','wizardThreshold','wizardNote'].includes(e.target.id)) return;
+  if(phoneMode || !['wizardWish','wizardEffect','wizardVoting','wizardThreshold','wizardNote','wizardBatch','wizardSwap','wizardAbility','wizardCard','wizardException'].includes(e.target.id)) return;
   e.preventDefault();
   if(!wizardMode()) return;
   const form = e.target;
-  const values = Object.fromEntries([...new FormData(form)].map(([key,value])=>[key,value.trim()]));
+  const data = new FormData(form,e.submitter);
+  const values = Object.fromEntries([...data].map(([key,value])=>[key,value.trim()]));
   let error;
   if(form.id==='wizardWish') error = recordWish(values);
-  if(form.id==='wizardEffect') error = applyWizardEffect(values);
-  if(form.id==='wizardVoting' || form.id==='wizardThreshold') error = applyWizardVoting(values,form.id==='wizardThreshold');
+  if(form.id==='wizardEffect'){
+    if(values.action==='stage'){
+      error=wizardEffectError(values,true);
+      if(!error){
+        ui.wizardBatch=[...(ui.wizardBatch||[]).filter(e=>e.target!==values.target || (e.rule||'')!==(values.rule||'')),values];
+        render();
+      }
+    }else error=applyWizardEffect(values);
+  }
+  if(form.id==='wizardSwap'){
+    const a=P(values.first), b=P(values.second);
+    if(!a || !b || a===b || a.role===b.role) error='Choose two players with different characters.';
+    else{
+      ui.wizardBatch=[...(ui.wizardBatch||[]).filter(e=>e.rule || ![a.id,b.id].includes(e.target)),
+        {target:a.id,character:b.role,life:'',alignment:''},{target:b.id,character:a.role,life:'',alignment:''}];
+      render();
+    }
+  }
+  if(form.id==='wizardBatch'){
+    const effects=ui.wizardBatch||[];
+    error=wizardBatchError(effects);
+    if(!error && values.trigger==='now') commit(()=>{ ui.wizardBatch=[]; applyWizardEffects(effects); });
+    else if(!error){ error=queueWizardItem({...values,kind:'batch',effects}); if(!error){ui.wizardBatch=[]; render();} }
+  }
+  if(form.id==='wizardAbility') error=wizardAbilityRule(values);
+  if(form.id==='wizardException') error=wizardException(values);
+  if(form.id==='wizardCard'){
+    const reveal=data.getAll('reveal').filter(id=>P(id));
+    if(!P(values.target) || (!values.message && !values.include) || (values.include==='roles' && !reveal.length)) error='Choose a recipient and add a message or choose what to reveal.';
+    else {
+      error=queueWizardItem({...values,kind:'card',recipient:values.target,reveal});
+      if(!error){ui.wizardCardDraft=null; render();}
+    }
+  }
+  if(form.id==='wizardVoting' && values.action==='stage'){
+    error=wizardVotingError(values);
+    if(!error){
+      ui.wizardBatch=[...(ui.wizardBatch||[]).filter(e=>e.target!==values.target || (e.rule||'')!==(values.rule||'')),values];
+      render();
+    }
+  }else if(form.id==='wizardVoting' || form.id==='wizardThreshold') error=applyWizardVoting(values,form.id==='wizardThreshold');
   if(form.id==='wizardNote'){
     if(!values.note) error = 'Enter a note.';
     else commit(()=>{ S.log.unshift({at:phaseLabel(),t:`Wizard note: ${values.note}`,private:true}); });
@@ -2951,6 +3138,30 @@ document.addEventListener('click', e=>{
     case 'closerecap': ui.recap = null; return render();
     case 'recapgo': { const night = ui.recap==='night'; ui.recap = null; return commit(night ? toDay : toNight); }
     case 'tab': ui.tab = el.dataset.k; render(); if(ui.tab==='wizard') document.getElementById('wizard-title')?.focus(); return;
+    case 'wizardunstage':
+      ui.wizardBatch=(ui.wizardBatch||[]).filter(e=>e.target!==id || (e.rule||'')!==el.dataset.rule);
+      return render();
+    case 'wizardrun':
+    case 'wizardedit':
+    case 'wizardskip': {
+      const item=wizardMode() && S.wizardQueue?.find(x=>x.id===id && ['waiting','ready'].includes(x.status));
+      if(!item) return;
+      if(act==='wizardskip') return commit(()=>{item.status='skipped'; log('Wizard toolkit: skipped a scheduled action.');});
+      if(act==='wizardedit') return commit(()=>{
+        if(item.kind==='card') ui.wizardCardDraft=item;
+        else ui.wizardBatch=item.effects;
+        item.status='revised'; log('Wizard toolkit: reopened a scheduled action for revision.');
+      });
+      if(item.status!=='ready') return;
+      if(item.kind==='batch'){
+        const error=wizardBatchError(item.effects);
+        if(error){ui.msg=error; return render();}
+        return commit(()=>{item.status='done';applyWizardEffects(item.effects);});
+      }
+      if(!P(item.recipient)) return;
+      ui.show={eyebrow:'Private information',big:P(item.recipient).name,sub:'Pass the screen to this player. Tap when they are ready.',wizardPass:item.id};
+      render(); document.querySelector('.show')?.focus(); return;
+    }
     case 'wizardclue': {
       const w = wizardMode() && S.wishes?.find(w=>w.id===id);
       if(w?.clue){ ui.show = {eyebrow:'A Wizard’s wish',sub:w.clue,clue:w.id}; render(); document.querySelector('.show')?.focus(); return; }
@@ -2959,6 +3170,15 @@ document.addEventListener('click', e=>{
     case 'dismiss': ui.msg=null; return render();
     case 'hideshow': {
       const c = ui.show; ui.show = null;
+      if(c?.wizardPass){
+        const item=S.wizardQueue?.find(x=>x.id===c.wizardPass && x.status==='ready');
+        if(item){
+          const roles=item.include==='roles' ? item.reveal.map(P).filter(Boolean).map(p=>p.name+' · '+R[p.role].name) : [];
+          ui.show=item.include==='grimoire'?{spy:true,wizardPrivate:true,message:item.message}:{eyebrow:'Private information',sub:[item.message,...roles].filter(Boolean).join('\n'),clue:item.id,wizardPrivate:true};
+          commit(()=>{item.status='done';log('Wizard toolkit: showed a private card.');});
+          document.querySelector('.show')?.focus(); return;
+        }
+      }
       if(c?.passTo) ui.show = cardYouAre(P(c.passTo));
       else if(c?.reveal && S.stage==='reveal'){
         P(c.reveal).revealed = true; save();
@@ -3022,7 +3242,7 @@ document.addEventListener('click', e=>{
         ui.recap = 'night'; return render();
       }
       ui.recap = 'day'; return render();
-    case 'execute': return commit(()=>{ execute(p); ui.show={eyebrow:'The town has spoken', big:`${p.name} is executed`, tone:'evil'}; });
+    case 'execute': if(!p || !S.day || S.day.executed || S.winner) return; return commit(()=>{ execute(p); ui.show={eyebrow:'The town has spoken', big:`${p.name} is executed`, tone:'evil'}; });
     case 'killp': return commit(()=>kill(p,'marked dead by you'));
     case 'revive': if(p && (!p.alive || p.fake)) return commit(()=>{ revivePlayer(p); log(`${p.name} is alive again.`); }); return;
     case 'ghost': if(p && deadForVoting(p)) return commit(()=>{
@@ -3067,7 +3287,7 @@ document.addEventListener('click', e=>{
       return commit(()=>addRem(p,'custom',{label,expires}));
     }
     case 'clearwin': return commit(()=>{ S.winner=null; });
-    case 'votes': { const x = S.day?.noms?.[+el.dataset.i]; if(!x || S.day.executed) return; x.votes = Math.max(0, Math.min(Math.max(wizardMode() || x.ballots || S.voteThreshold ? S.players.length*voteLimit : S.players.length*2, x.votes||0), (x.votes ?? (+el.dataset.d>0 ? needed()-1 : 1)) + +el.dataset.d)); save(); return render(); }
+    case 'votes': { const x = S.day?.noms?.[+el.dataset.i]; if(!x || x.closed || S.day.executed) return; x.votes = Math.max(0, Math.min(Math.max(wizardMode() || x.ballots || S.voteThreshold ? S.players.length*voteLimit : S.players.length*2, x.votes||0), (x.votes ?? (+el.dataset.d>0 ? needed()-1 : 1)) + +el.dataset.d)); save(); return render(); }
     case 'markvoters': { const i = +el.dataset.i, x = S.day?.noms?.[i]; if(!x) return;
       if(ui.pick?.kind==='voters' && ui.pick.i===i){ ui.pick = null; return render(); }
       ui.pick = {kind:'voters', i, chosen:[...(x.voters||[])]}; return render(); }
@@ -3097,7 +3317,7 @@ document.addEventListener('click', e=>{
         const dying = ps.every(q=>f.live[q.id]==='live') ? ps : ps.filter(q=>f.live[q.id]==='die');
         if(dying===ps && ps.every(q=>f.live[q.id]==='live')) log('All three chose to live, so all three die.');
         dying.forEach(q=>demonHit(a||q,q)); }); }
-    case 'tinkerdie': return commit(()=>kill(p,'the Tinker died'));
+    case 'tinkerdie': if(!p?.alive || impaired(p) || !hasAbility(p,'tinker')) return; return commit(()=>kill(p,'the Tinker died'));
     case 'moonkill': return commit(()=>{ p.rem = p.rem.filter(r=>r.type!=='moon'); if(!isEvil(p)) nightKill(p,'chosen by the Moonchild'); else log(`${p.name} is evil, so the Moonchild's choice does nothing.`); S.done.moonchild = true; });
     case 'rosh': { const q = P(S.day.rosh); return commit(()=>{ S.day.rosh = null; if(el.dataset.v==='lose'){ log(`${q.name} lost roshambo.`); if(kill(q,'executed')) minstrel(q); } else log(`${q.name} won roshambo and lives.`); }); }
     case 'usedonce': return commit(()=>{ addRem(p,'noability'); log(`${p.name} used their ${R[wake(p)].name} ability.`); });
@@ -3105,7 +3325,7 @@ document.addEventListener('click', e=>{
       if(!undo.length) return;
       const u = undo[undo.length-1], prev = JSON.parse(u.s);
       if(S.stage==='game' && prev.stage!=='game'){ ui.msg = "The game has started, so Undo stops here. Use New game to go back to setup."; return render(); }
-      undo.pop(); S = prev; ui.rulings = u.rulings || []; ui.pick=null; ui.vote=null; ui.recap=null; ui.pop=null; ui.msg = `Undid: ${u.what}`; ensureConsistent(); save(); return render();
+      undo.pop(); S = prev; ui.rulings = u.rulings || []; ui.pick=null; ui.vote=null; ui.recap=null; ui.pop=null; ui.show=null; ui.msg = `Undid: ${u.what}`; ensureConsistent(); save(); return render();
     }
     case 'newgame':
       if(!ui.confirmNew){ ui.confirmNew = true; return render(); }
@@ -3243,6 +3463,7 @@ document.addEventListener('keydown', e=>{
   if(e.key==='Escape'){
     if(ui.gmenu) ui.gmenu = false;
     else if(ui.menu) ui.menu = null;
+    else if(ui.show?.wizardPass){ ui.show=null; }
     else if(ui.show) return document.querySelector('.show')?.click();
     else if(ui.preview) ui.preview = null;
     else if(ui.recap) ui.recap = null;
