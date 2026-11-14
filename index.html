@@ -699,7 +699,7 @@ const SCRIPTS = {
   witsend:{name:"Wit's End",by:'Emerson',fabled:['toymaker'],roles:['investigator','clockmaker','empath','fortuneteller','ravenkeeper','artist','lunatic','drunk','godfather','marionette','pukka','imp']},
   highnoon:{name:'High Noon (Hard Version)',by:'Stephen Dewey',fabled:['sentinel'],roles:['pixie','snakecharmer','philosopher','professor','slayer','cannibal','moonchild','recluse','marionette','eviltwin','zombuul','legion']},
   wizard:{name:'Wizard Trouble',by:'',roles:['washerwoman','investigator','chef','empath','fortuneteller','undertaker','monk','ravenkeeper','virgin','slayer','artist','fisherman','savant','drunk','recluse','saint','zealot','poisoner','spy','baron','wizard','imp']},
-  sesots:{name:'Short End of the Stick',by:'LowlyCube',counts:[4],note:'For 4 players: 3 Townsfolk and the Pukka. No Minions or Outsiders.',roles:['shugenja','empath','mathematician','slayer','seamstress','philosopher','pukka']}
+  sesots:{name:'Short End of the Stick',by:'LowlyCube',counts:[4],bluffs:1,note:'For 4 players: 3 Townsfolk and the Pukka. No Minions or Outsiders. The Pukka gets 1 bluff.',roles:['shugenja','empath','mathematician','slayer','seamstress','philosopher','pukka']}
 };
 const FIRST = ['philosopher','alchemist','minioninfo','lunatic','demoninfo','king','marionette','poisoner','widow','wizard','snakecharmer','steward','godfather','eviltwin','witch','cerenovus','harpy','pukka','pixie','washerwoman','librarian','investigator','chef','empath','fortuneteller','butler','clockmaker','dreamer','seamstress','balloonist','shugenja','bountyhunter','spy','ogre','chambermaid','mathematician','leviathan'];
 const OTHER = ['philosopher','poisoner','innkeeper','wizard','gambler','snakecharmer','monk','witch','cerenovus','pithag','harpy','newimp','lunatic','exorcist','lycanthrope','legion','imp','zombuul','pukka','fanggu','nodashii','vortox','vigormortis','alhadikhia','assassin','godfather','barber','sweetheart','sage','banshee','professor','choirboy','farmer','tinker','moonchild','ravenkeeper','empath','fortuneteller','undertaker','dreamer','flowergirl','towncrier','oracle','seamstress','juggler','balloonist','king','bountyhunter','butler','spy','chambermaid','mathematician','gatekeeper','leviathan'];
@@ -1064,6 +1064,7 @@ const why = p => p.role==='drunk' ? 'This is the Drunk' : p.role==='marionette' 
 const inPlay = k => S.players.some(p=>p.role===k || wake(p)===k);
 const sober = k => S.players.find(p=>(p.alive || retainedAbility(p)) && hasAbility(p,k) && !impaired(p));
 const evilInfo = () => S.players.length>=7 || hasFabled('toymaker');
+const bluffCount = () => evilInfo() ? 3 : SCRIPTS[S.script]?.bluffs || 0;
 const demonChoose = k => ['leviathan','legion'].includes(k) ? null : k==='pukka' ? 'Choose a player to poison' : k==='alhadikhia' ? 'Choose 3 players' : 'Choose a player to kill';
 const alignNote = p => p.align && p.align!==(['minion','demon'].includes(team(p))?'evil':'good') ? ` (${p.align})` : '';
 const roleLabel = p => !p.role ? 'No character' : (THINKS.includes(p.role) ? `${R[p.role].name}, thinks ${R[p.shown]?.name||'?'}` : p.as && p.as!==p.role ? `${R[p.role].name}, has the ${R[p.as]?.name||'?'} ability` : R[p.role].name) + alignNote(p);
@@ -1174,12 +1175,12 @@ function fillChars(){
 function bluffPickHTML(){
   const used = new Set(S.players.flatMap(p=>[p.role,p.shown,p.as])), good = [...pool('townsfolk'),...pool('outsider')].filter(k=>!used.has(k) || S.bluffs.includes(k));
   const sel = i => `<select data-change="bluff" data-i="${i}" aria-label="Bluff ${i+1}"><option value="">None</option>${good.filter(k=>k===S.bluffs[i] || !S.bluffs.includes(k)).map(k=>`<option value="${k}" ${k===S.bluffs[i]?'selected':''}>${esc(R[k].name)}</option>`).join('')}</select>`;
-  return `<div class="row">${[0,1,2].map(sel).join('')}<button class="btn small" data-act="rebluff">Re-roll</button></div>`;
+  return `<div class="row">${[...Array(bluffCount()).keys()].map(sel).join('')}<button class="btn small" data-act="rebluff">Re-roll</button></div>`;
 }
 function pickBluffs(){
   const used = new Set(S.players.flatMap(p=>[p.role,p.shown,p.as]));
   const free = [...pool('townsfolk'),...pool('outsider')].filter(r=>!used.has(r)), odd = k => ['drunk','lunatic'].includes(k);
-  return [...shuffle(free.filter(k=>!odd(k))), ...shuffle(free.filter(odd))].slice(0,3);
+  return [...shuffle(free.filter(k=>!odd(k))), ...shuffle(free.filter(odd))].slice(0,bluffCount());
 }
 function setupMarks(){
   ['redherring','fauxpaw','twin','eviltf'].forEach(dropRem);
@@ -1214,7 +1215,7 @@ function startGame(){
   log(`${scriptName()} with ${S.players.length} players${fabled().length?` (${fabled().map(k=>R[k].name).join(', ')})`:''}.`);
   S.players.forEach(p=>log(`${p.name} starts as the ${roleLabel(p)}${alignNote(p)?'':` (${isEvil(p)?'evil':'good'})`}.`));
   S.players.forEach(p=>p.rem.forEach(r=>log(`${p.name}: ${r.label}.`)));
-  if(evilInfo() && S.bluffs.length) log(`Demon bluffs: ${S.bluffs.map(b=>R[b].name).join(', ')}.`);
+  if(bluffCount() && S.bluffs.length) log(`Demon bluffs: ${S.bluffs.map(b=>R[b].name).join(', ')}.`);
   S.stage='game'; S.phase={kind:'night',n:1}; S.done={}; S.picked={}; S.pickedIds={}; S.news=''; S.revealed=false;
   S.night={changed:[]}; S.lastDay={}; S.flags={}; S.goodExecs=0; S.haircut=null; S.pending=[];
   ui.form={}; ui.open=null;
@@ -1423,7 +1424,7 @@ function steps(){
   const added = [...new Set(S.players.flatMap(extraAbilities))].filter(k=>STEP[k] && OTHER.includes(k) && !order.includes(k));
   for(const k of [...order,...added]){
     const st = stepDef(k); if(!st) continue;
-    if((k==='minioninfo'||k==='demoninfo') && !evilInfo()) continue;
+    if((k==='minioninfo' && !evilInfo()) || (k==='demoninfo' && !bluffCount())) continue;
     const actors = actorsFor(k).filter(p=>!has(p,'wizardmute') || ['minioninfo','demoninfo','newimp','king','barber','marionette'].includes(k));
     if(!actors.length) continue;
     let skip = null;
@@ -2106,7 +2107,7 @@ function setupHTML(){
       <p class="muted">Shuffled into seats at random. Click a seat to change a character.</p>
       <div class="row"><button class="btn small" data-act="redeal">Shuffle again</button></div>
       ${parts.join('')}
-      ${evilInfo()?`<h3>Demon bluffs</h3>${bluffPickHTML()}${S.bluffs.length<3?`<p class="muted">${S.bluffs.length ? `Only ${S.bluffs.length} good character${S.bluffs.length===1?' is':'s are'} left out of play on this script, so that's all the Demon can get.` : 'Every good character on this script is in play, so the Demon gets no bluffs.'}</p>`:''}`:''}
+      ${bluffCount()?`<h3>Demon bluffs</h3>${bluffPickHTML()}${S.bluffs.length<bluffCount()?`<p class="muted">${S.bluffs.length ? `Only ${S.bluffs.length} good character${S.bluffs.length===1?' is':'s are'} left out of play on this script, so that's all the Demon can get.` : 'Every good character on this script is in play, so the Demon gets no bluffs.'}</p>`:''}`:''}
       <div style="margin-top:14px" class="row"><button class="btn" data-act="stage" data-to="chars">Back</button><button class="btn primary" style="flex:1" data-act="stage" data-to="reveal">Next: show players their characters</button></div>`;
   }
   if(S.stage==='reveal'){
