@@ -612,6 +612,7 @@ const R = {
   baron:{name:'Baron',team:'minion',ability:'There are 2 extra Outsiders in play. [+2 Outsiders]'},
   imp:{name:'Imp',team:'demon',ability:'Each night after the first, picks a player who dies. If they pick themself, a Minion becomes the Imp.'},
 
+  steward:{name:'Steward',team:'townsfolk',ability:'You start knowing one good player.'},
   snakecharmer:{name:'Snake Charmer',team:'townsfolk',ability:'Each night, picks a living player. If it is the Demon, they swap characters and teams, and the old Demon is poisoned.'},
   alchemist:{name:'Alchemist',team:'townsfolk',ability:'Has the ability of a Minion that is not in play. The Storyteller may ask them to choose again.'},
   lycanthrope:{name:'Lycanthrope',team:'townsfolk',ability:'Each night after the first, picks a living player. If good, they die and the Demon kills nobody tonight. One good player registers as evil.'},
@@ -683,9 +684,10 @@ const R = {
   bootlegger:{name:'Bootlegger',team:'fabled',ability:'This script has homebrew characters or rules.'}
 };
 const TEAMS = {townsfolk:'Townsfolk',outsider:'Outsiders',minion:'Minions',demon:'Demon'};
-const DIST = {5:[3,0,1,1],6:[3,1,1,1],7:[5,0,1,1],8:[5,1,1,1],9:[5,2,1,1],10:[7,0,2,1],11:[7,1,2,1],12:[7,2,2,1],13:[9,0,3,1],14:[9,1,3,1],15:[9,2,3,1]};
+const DIST = {3:[1,1,0,1],5:[3,0,1,1],6:[3,1,1,1],7:[5,0,1,1],8:[5,1,1,1],9:[5,2,1,1],10:[7,0,2,1],11:[7,1,2,1],12:[7,2,2,1],13:[9,0,3,1],14:[9,1,3,1],15:[9,2,3,1]};
 const SCRIPTS = {
   tb:{name:'Trouble Brewing',by:'The Pandemonium Institute',roles:['washerwoman','librarian','investigator','chef','empath','fortuneteller','undertaker','monk','ravenkeeper','virgin','slayer','soldier','mayor','butler','drunk','recluse','saint','poisoner','spy','scarletwoman','baron','imp']},
+  threensy:{name:'Threensyville',by:'Ken Cheng',roles:['snakecharmer','steward','mayor','drunk','mutant','imp']},
   teensy:{name:'Teensyville',by:'Your own pick of Trouble Brewing characters',roles:null},
   lndb:{name:'Late Night Drive By (Updated)',by:'Michelle Ma',roles:['snakecharmer','alchemist','lycanthrope','minstrel','slayer','fool','tinker','golem','recluse','godfather','scarletwoman','psychopath','pukka','imp']},
   sav:{name:'Sex and Violence',by:'The Pandemonium Institute',note:'Lunatic replaces the Klutz.',roles:['clockmaker','dreamer','snakecharmer','mathematician','flowergirl','towncrier','oracle','savant','seamstress','philosopher','artist','juggler','sage','mutant','sweetheart','barber','lunatic','eviltwin','witch','cerenovus','pithag','fanggu','vigormortis','nodashii','vortox']},
@@ -697,7 +699,7 @@ const SCRIPTS = {
   highnoon:{name:'High Noon (Hard Version)',by:'Stephen Dewey',fabled:['sentinel'],roles:['pixie','snakecharmer','philosopher','professor','slayer','cannibal','moonchild','recluse','marionette','eviltwin','zombuul','legion']},
   wizard:{name:'Wizard Trouble',by:'',roles:['washerwoman','investigator','chef','empath','fortuneteller','undertaker','monk','ravenkeeper','virgin','slayer','artist','fisherman','savant','drunk','recluse','saint','zealot','poisoner','spy','baron','wizard','imp']}
 };
-const FIRST = ['philosopher','alchemist','minioninfo','lunatic','demoninfo','king','marionette','poisoner','widow','wizard','snakecharmer','godfather','eviltwin','witch','cerenovus','harpy','pukka','pixie','washerwoman','librarian','investigator','chef','empath','fortuneteller','butler','clockmaker','dreamer','seamstress','balloonist','bountyhunter','spy','ogre','chambermaid','mathematician','leviathan'];
+const FIRST = ['philosopher','alchemist','minioninfo','lunatic','demoninfo','king','marionette','poisoner','widow','wizard','snakecharmer','steward','godfather','eviltwin','witch','cerenovus','harpy','pukka','pixie','washerwoman','librarian','investigator','chef','empath','fortuneteller','butler','clockmaker','dreamer','seamstress','balloonist','bountyhunter','spy','ogre','chambermaid','mathematician','leviathan'];
 const OTHER = ['philosopher','poisoner','innkeeper','wizard','gambler','snakecharmer','monk','witch','cerenovus','pithag','harpy','newimp','lunatic','exorcist','lycanthrope','legion','imp','zombuul','pukka','fanggu','nodashii','vortox','vigormortis','alhadikhia','assassin','godfather','barber','sweetheart','sage','banshee','professor','choirboy','farmer','tinker','moonchild','ravenkeeper','empath','fortuneteller','undertaker','dreamer','flowergirl','towncrier','oracle','seamstress','juggler','balloonist','king','bountyhunter','butler','spy','chambermaid','mathematician','gatekeeper','leviathan'];
 const KILLERS = ['imp','fanggu','nodashii','vortox','vigormortis','zombuul','legion'];
 const nm = p => p ? p.name : '?';
@@ -732,6 +734,7 @@ const STEP = {
   widow:{how:'Wake the Widow and let them look at the grimoire. Click who they point at: that player is poisoned. Then click a good player, wake them and show them that a Widow is in play.',choose:'Choose a player to poison',pick:'widow',
     cards:()=>{ const k = S.players.find(p=>has(p,'know')); return k ? [{label:`Show ${k.name} "a Widow is in play"`,card:{eyebrow:'This character is in play',icon:'widow',big:'Widow',tone:'good'}}] : []; }},
   wizard:{how:'If they make a wish, open Wizard to record your ruling. Otherwise press Done.',optional:1},
+  steward:{how:'Wake the Steward and point to the other good player. For a Drunk who thinks they are the Steward, choose what to show.',info:'player',label:'This player is good'},
   snakecharmer:{how:'Wake the Snake Charmer. Show the screen, then click who they point at. If it is the Demon, they swap characters: show both players their new character below.',choose:'Choose a living player',pick:'snakecharmer',rule:{alive:1}},
   'godfather@1':{how:'Wake the Godfather and show which Outsiders are in play.',cards:()=>{ const os = [...new Set(S.players.filter(p=>team(p)==='outsider').map(p=>p.role))];
     return [{label:'Show the Outsiders in play',card: os.length ? {eyebrow:'Outsiders in play',icons:os,list:os.map(k=>R[k].name),tone:'evil'} : {eyebrow:'Outsiders in play',big:'None',tone:'evil'}}]; }},
@@ -926,6 +929,7 @@ const ROLE_ICON = {
   scarletwoman:'<path d="M12 21c-.5-3 .5-6 0-9"/><path d="M12 12c-3.5 0-5-2.6-4.2-5.2C9.3 8 10.8 7.4 12 5c1.2 2.4 2.7 3 4.2 1.8.8 2.6-.7 5.2-4.2 5.2z"/><path d="M12 16.5c1.6-1.6 3.4-1.8 4.6-1.2-1 1.8-2.8 2.4-4.6 1.2z"/>',
   baron:'<path d="M7.5 16V5.5h9V16"/><path d="M4 16h16v2.5H4z"/><path d="M7.5 13h9"/>',
   imp:'<path d="M12 21V6.5"/><path d="M6.5 3v4.2a5.5 5.5 0 0 0 11 0V3"/><path d="M12 3v3.5"/><path d="M9.5 21h5"/>',
+  steward:'<path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5"/>',
   snakecharmer:'<path d="M6 20.5c-2.8 0-2.8-4 0-4h9c3 0 3-4.5 0-4.5H9c-3 0-3-4.5 0-4.5h6.5"/><path d="M15.5 7.5l3.5-1.5M15.5 7.5L19 9"/><path d="M13 7.5h.01"/>',
   alchemist:'<path d="M10 3h4M10.5 3v5.2a6.3 6.3 0 1 0 3 0V3"/><path d="M6.3 14.5h11.4"/><path d="M10 17.5h.01M13.5 16.8h.01"/>',
   lycanthrope:'<path d="M12 12.5c-3 0-5 2.5-5 4.7 0 1.6 1.3 2.3 2.6 2.3.9 0 1.6-.6 2.4-.6s1.5.6 2.4.6c1.3 0 2.6-.7 2.6-2.3 0-2.2-2-4.7-5-4.7z"/><ellipse cx="5.8" cy="10" rx="1.6" ry="2.1"/><ellipse cx="9.5" cy="6.3" rx="1.6" ry="2.1"/><ellipse cx="14.5" cy="6.3" rx="1.6" ry="2.1"/><ellipse cx="18.2" cy="10" rx="1.6" ry="2.1"/>',
@@ -1543,7 +1547,9 @@ function infoSuggest(k, a){
       others.filter(p=>team(p)!==last).forEach(p=>add(T, `${p.name} (${TEAM1[team(p)]})`, {p:p.id}));
       if(last) others.filter(p=>team(p)===last).forEach(p=>add(F, `${p.name} (${TEAM1[last]} again)`, {p:p.id}));
       if(!last) note = 'First time: any player works.'; }
-    else {
+    else if(k==='steward'){
+      others.forEach(p=>add(isEvil(p)?F:T,p.name,{p:p.id}));
+    }else {
       others.filter(p=>isEvil(p) && !has(p,'bhknow')).forEach(p=>add(T, p.name, {p:p.id}));
       flexers().filter(p=>p!==a && abilityOf(p)==='recluse').forEach(p=>add(T, `${p.name} (if ${regLabel(p)})`, {p:p.id}));
       others.filter(p=>!isEvil(p)).slice(0,4).forEach(p=>add(F, p.name, {p:p.id}));
@@ -2042,7 +2048,7 @@ function setupHTML(){
       <div class="roster">${[...roster, ...extra.map(p=>p.name)].map(chip).join('')}</div>
       <div class="row" style="margin-top:8px"><input type="text" id="rnew" placeholder="New name" aria-label="New player's name" autocomplete="off" style="flex:1;min-width:0"><button class="btn small primary" data-act="radd">${ic('plus')}Add</button></div>
       <div class="row" style="margin-top:8px"><span class="seated"><b>${n}</b> seated</span>${n?'<button class="btn small" data-act="rclear">Clear seats</button>':''}<button class="btn small ${ui.editRoster?'primary':''}" data-act="redit">${ui.editRoster?'Done editing':'Edit list'}</button></div>
-      ${okN?`<p class="muted" style="margin-top:8px">${t} Townsfolk · ${o} Outsider${o===1?'':'s'} · ${m} Minion${m>1?'s':''} · ${d} Demon${n<=6?(evilInfo()?'. The Toymaker gives evil their normal info even with 5 or 6 players.':'. With 6 or fewer players, Minions and the Demon do not learn each other.'):''}</p>`:`<p class="warn">${esc(scriptName())} needs ${lo} to ${hi} players. ${n<lo?`Seat ${lo-n} more.`:`Take ${n-hi} off.`}</p>`}
+      ${okN?`<p class="muted" style="margin-top:8px">${t} Townsfolk · ${o} Outsider${o===1?'':'s'} · ${m} Minion${m>1?'s':''} · ${d} Demon${n<=6?(evilInfo()?'. The Toymaker gives evil their normal info even with 5 or 6 players.':'. With 6 or fewer players, Minions and the Demon do not learn each other.'):''}</p>`:`<p class="warn">${esc(scriptName())} needs ${lo===hi?lo:lo+' to '+hi} players. ${n<lo?`Seat ${lo-n} more.`:`Take ${n-hi} off.`}</p>`}
       ${dupNames().length?`<p class="warn">Two players are called ${esc(dupNames().join(', '))}. Give everyone a different name so phones and the record can tell them apart.</p>`:''}
       <div style="margin-top:12px"><button class="btn primary big" data-act="stage" data-to="chars" ${dupNames().length||!okN?'disabled':''}>Next: choose characters</button></div>`;
   }
@@ -2122,7 +2128,7 @@ function previewHTML(){
     <div class="row" style="margin-top:14px"><button class="btn" data-act="closepreview">Back</button><button class="btn primary" style="flex:1" data-act="setscript" data-v="${id}">Play ${esc(sc.name)}</button></div>
   </div></div>`;
 }
-function playerCounts(){ return S.script==='teensy' ? [5,6] : Array.from({length:11},(_,i)=>i+5).filter(c=>DIST[c][0]<=pool('townsfolk').length+(pool('outsider').length>=DIST[c][1]?0:-99) && (DIST[c][2]<=pool('minion').length || pool('demon').includes('legion'))); }
+function playerCounts(){ if(S.script==='threensy') return [3]; return S.script==='teensy' ? [5,6] : Array.from({length:11},(_,i)=>i+5).filter(c=>DIST[c][0]<=pool('townsfolk').length+(pool('outsider').length>=DIST[c][1]?0:-99) && (DIST[c][2]<=pool('minion').length || pool('demon').includes('legion'))); }
 
 /* ---------- shareable character sheet ---------- */
 const SHEET_TEAMS = [['townsfolk','Townsfolk'],['outsider','Outsiders'],['minion','Minions'],['demon','Demons']];
@@ -2302,7 +2308,7 @@ function stepBody(s){
       parts.push(`<div class="row"><label class="f">Character to show<select data-form="${s.k}" data-field="role">${pickOpts(f.role, keys)}</select></label>${showBtn}</div>`);
     }
     if(st.info==='player'){
-      parts.push(`<div class="truth">${s.k==='balloonist'?`Last shown type: <b>${esc(TEAMS[S.flags?.balloon]||'none yet')}</b>. Pick a player of a different type.`:`Evil players: ${names(S.players.filter(p=>p!==a && isEvil(p)))}`}</div>`);
+      parts.push(`<div class="truth">${s.k==='balloonist'?`Last shown type: <b>${esc(TEAMS[S.flags?.balloon]||'none yet')}</b>. Pick a player of a different type.`:s.k==='steward'?`Other good players: ${names(S.players.filter(p=>p!==a && !isEvil(p)))}`:`Evil players: ${names(S.players.filter(p=>p!==a && isEvil(p)))}`}</div>`);
       parts.push(suggHTML(s.k, a));
       parts.push(`<div class="row"><label class="f">Player to show<select data-form="${s.k}" data-field="p">${plOpts(f.p)}</select></label>${showBtn}</div>`);
     }
@@ -2345,7 +2351,8 @@ function nightHTML(){
       ${focus!==cur&&cur?`<button class="btn small" data-act="openstep" data-k="${cur.k}">${ic('back')}Back to the current step</button>`:''}
     </div>`
     : `<div class="focus"><div class="ftitle">Night ${S.phase.n} is done</div><p>Everyone has had their turn.</p><button class="btn primary big" data-act="advance">${ic('sun')}Everyone wakes up: start day ${S.phase.n}</button></div>`;
-  return `<h2>Night ${S.phase.n}</h2>
+  const cues = S.script==='threensy' && S.phase.n===1 ? '<p class="muted">Call Snake Charmer and Steward aloud even when their tokens are absent. If the Snake Charmer swaps with the Imp, signal both players privately before waking the Steward.</p>' : '';
+  return `<h2>Night ${S.phase.n}</h2>${cues}
     <div class="progress"><span style="width:${active.length?doneN/active.length*100:100}%"></span></div>
     ${card}
     <div class="legend"><span>${ic('eye')}show a player</span><span>${ic('target')}click their pick</span><span>Enter: Done · Esc: close · H: hide</span></div>
@@ -2356,10 +2363,32 @@ function nightHTML(){
     ${cur?`<div style="margin-top:12px"><button class="btn big" data-act="advance">${ic('skip')}Skip the rest and start the day</button></div>`:''}`;
 }
 
+function threensyVoteHTML(day){
+  const players=voters();
+  const mutant=players.find(p=>p.role==='mutant' && !impaired(p));
+  return `<h3>Discussion</h3>${timerHTML()}
+    ${mutant?`<p class="muted">If ${esc(mutant.name)} is mad about being an Outsider, you may execute them.</p><button class="btn small" data-act="pick" data-kind="execute">Choose an execution</button>`:''}
+    <h3>Simultaneous vote</h3>
+    <p>Give the players up to three minutes to talk. Count down from three and have everyone point at the person they think is the Demon. Two votes execute a player.</p>
+    ${day.pointVotes?`<p>No player received two votes.</p><button class="btn primary" data-act="advance">End day with no execution</button>`:
+      `<form id="threensyVote">${players.map(p=>`<label class="f">${esc(p.name)} points at<select name="vote" required><option value="">Choose a player…</option>${players.map(q=>`<option value="${esc(q.id)}">${esc(q.name)}</option>`).join('')}</select></label>`).join('')}
+        <button class="btn primary" type="submit" style="margin-top:10px">Record votes</button></form>`}`;
+}
+function recordThreensyVotes(ids){
+  const players=voters();
+  if(S.script!=='threensy' || night() || S.phase.n!==1 || S.winner || S.day.executed || S.day.pointVotes || players.length!==3 || ids.length!==3 || ids.some(id=>!players.some(p=>p.id===id))) return;
+  commit(()=>{
+    S.day.pointVotes=ids;
+    log(players.map((p,i)=>`${p.name} points at ${P(ids[i]).name}`).join(' · '));
+    const target=players.find(p=>ids.filter(id=>id===p.id).length>=2);
+    if(target){ execute(target); ui.show={eyebrow:'The town has spoken',big:`${target.name} is executed`,tone:'evil'}; }
+  });
+}
 function dayHTML(){
   const d = S.day, a = voters().length;
   const dead = S.players.filter(deadForVoting), ghosts = dead.reduce((sum,p)=>sum+ghostVotes(p),0);
   const parts = [`<h2>Day ${S.phase.n}</h2>`];
+  if(S.script==='threensy' && S.phase.n===1 && !S.winner && !d.executed && a===3) return parts.join('') + threensyVoteHTML(d);
   parts.push(`<div class="counts" style="grid-template-columns:repeat(3,minmax(0,1fr))"><div><b>${a}</b>alive</div><div><b>${needed()}</b>votes to put on the block</div><div><b>${ghosts}</b>ghost vote${ghosts===1?'':'s'} left</div></div>`);
   const notes = [];
   const butler = S.players.find(p=>wake(p)==='butler' && p.alive); if(butler) notes.push(`${butler.name} (Butler) may only vote if their master votes too.`);
@@ -2870,6 +2899,7 @@ function dockHTML(){
     const t = stepTitle(cur.k);
     return `<button class="btn" data-act="scrollpanel">${esc(t)} ↓</button><button class="btn primary" data-act="done" data-k="${cur.k}">Done</button>`;
   }
+  if(S.script==='threensy' && S.phase.n===1 && !S.day.executed && !S.winner && voters().length===3) return '';
   if(S.day.executed || S.winner) return `<button class="btn primary" data-act="advance">Night falls</button>`;
   return `${timerOn()?`<span class="timer ${timerLeft()<30000?'low':''}" data-timer>${fmt(timerLeft())}</span>`:''}<span>${blockOf()?.id?`${esc(P(blockOf().id).name)} on the block`:`${needed()} to pass`}</span>${blockOf()?.id?`<button class="btn danger" data-act="execute" data-id="${blockOf().id}">Execute</button>`:`<button class="btn danger" data-act="pick" data-kind="execute">Execute…</button>`}<button class="btn" data-act="advance">Night falls</button>`;
 }
@@ -3034,6 +3064,10 @@ document.addEventListener('change', e=>{
 });
 
 document.addEventListener('submit', e=>{
+  if(e.target.id==='threensyVote'){
+    e.preventDefault();
+    return recordThreensyVotes(new FormData(e.target).getAll('vote'));
+  }
   if(phoneMode || !['wizardWish','wizardEffect','wizardVoting','wizardThreshold','wizardNote','wizardBatch','wizardSwap','wizardAbility','wizardCard','wizardException'].includes(e.target.id)) return;
   e.preventDefault();
   if(!wizardMode()) return;
@@ -3214,6 +3248,7 @@ document.addEventListener('click', e=>{
     case 'openstep': { const cur = currentStep(steps()); ui.open = cur && cur.k===el.dataset.k ? null : el.dataset.k; return render(); }
     case 'stage': {
       const to = el.dataset.to;
+      if(to==='chars' && !playerCounts().includes(S.players.length)) return;
       if(to==='seats' && S.stage==='chars') return commit(()=>{ dealSeats(); S.stage='seats'; });
       return commit(()=>{ S.stage = to; });
     }
